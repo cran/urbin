@@ -1,0 +1,10 @@
+export( "urbinEffCat" )
+export( "urbinEffInt" )
+export( "urbinEla" )
+export( "urbinElaInt" )
+
+importFrom( "stats", "dnorm" )
+importFrom( "stats", "pnorm" )
+importFrom( "stats", "rnorm" )
+
+S3method( "print", "urbin" )

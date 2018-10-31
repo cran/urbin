@@ -1,0 +1,107 @@
+
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library( "urbin" )
+Loading required package: miscTools
+> 
+> # Example
+> eff6a <- urbinEffInt( allCoef = c( 0.33, 0.22, 0.05, 0.6 ),
++   allXVal = c( 1, NA, 0.16, 0.13 ),
++   xPos = 2, 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ), model = "logit" )
+> eff6a
+   effect     stdEr 
+0.0386895        NA 
+> 
+> eff6b <- urbinEffInt( allCoef = c( 0.33, 0.22, 0.05, 0.6 ),
++   allXVal = c( 1, NA, 0.16, 0.13 ),
++   xPos = 2, 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ), 
++   allCoefVcov = c( 0.003, 0.045, 0.007, 0.009 ), model = "logit" )
+> eff6b
+    effect      stdEr 
+0.03868950 0.01057185 
+> 
+> # Example
+> eff7a <- urbinEffInt( allCoef = c( 0.33, 0.022, 0.005, 0.6 ),
++   allXVal = c( 1, NA, NA, 0.0004 ),
++   xPos = c( 2, 3 ), 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ), model = "logit" )
+> eff7a
+   effect     stdEr 
+0.0926833        NA 
+> 
+> eff7b <- urbinEffInt( allCoef = c( 0.33, 0.022, 0.005, 0.6 ),
++   allXVal = c( 1, NA, NA, 0.13 ),
++   xPos = c( 2, 3 ), 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ), 
++   allCoefVcov = c( 0.003, 0.011, 0.0025, 0.009 ), model = "logit" )
+Warning message:
+In urbinEffInt(allCoef = c(0.33, 0.022, 0.005, 0.6), allXVal = c(1, NA, NA, 0.13), xPos = c(2, 3), refBound = c(8, 12), intBound = c(13, 15), model = "logit", allCoefVcov = c(0.003, 0.011, 0.0025, 0.009)) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> eff7b
+    effect      stdEr 
+0.08853066 0.01757014 
+> 
+> #Example
+> eff8a <- urbinEffInt( allCoef = c( -2.5, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, NA, 0.12 ), 
++   xPos = 2, 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ),
++   yCat = 2, model = "mlogit" )
+> eff8a
+    effect      stdEr 
+-0.1372913         NA 
+> 
+> eff8b <- urbinEffInt( allCoef = c( -2.5, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, NA, 0.12 ), 
++   xPos = 2, 
++   refBound = c( 8, 12 ), intBound = c( 13, 15 ),
++   yCat = 2, 
++   allCoefVcov = c( 0.003, 0.045, 0.007, 0.009, 0.0008, 0.9 ),
++   model = "mlogit" )
+> eff8b
+     effect       stdEr 
+-0.13729127  0.01564281 
+> 
+> #Example
+> eff9a <- urbinEffInt( allCoef = c( 0.2, 0.03, 0.005, -0.2, 0.03, 0.006 ), 
++   allXVal = c( 1, NA, NA ), 
++   xPos = c( 2, 3 ), 
++   refBound = c( 1, 12 ), intBound = c( 13, 25 ),
++   yCat = 2, model = "mlogit" )
+> eff9a
+   effect     stdEr 
+0.1584863        NA 
+> 
+> eff9b <- urbinEffInt( allCoef = c( 0.2, 0.03, 0.005, -0.2, 0.03, 0.006 ), 
++   allXVal = c( 1, NA, NA ), 
++   xPos = c( 2, 3 ), 
++   refBound = c( 1, 12 ), intBound = c( 13, 25 ),
++   yCat = 2, 
++   allCoefVcov = c( 0.03, 0.025, 0.0007, 0.009, 0.008, 0.0009 ),
++   model = "mlogit" )
+Warning message:
+In urbinEffInt(allCoef = c(0.2, 0.03, 0.005, -0.2, 0.03, 0.006), allXVal = c(1, NA, NA), xPos = c(2, 3), refBound = c(1, 12), intBound = c(13, 25), model = "mlogit", allCoefVcov = c(0.03, 0.025, 7e-04, 0.009, 0.008, 9e-04), yCat = 2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> eff9b
+   effect     stdEr 
+0.1584863 0.1297677 
+> 
+> proc.time()
+   user  system elapsed 
+  0.128   0.003   0.126 

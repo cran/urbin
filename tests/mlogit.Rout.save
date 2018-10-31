@@ -1,0 +1,1837 @@
+
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library( "urbin" )
+> library( "maxLik" )
+Loading required package: miscTools
+
+Please cite the 'maxLik' package as:
+Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
+
+If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
+https://r-forge.r-project.org/projects/maxlik/
+> library( "mlogit" )
+Loading required package: Formula
+> options( digits = 4 )
+> 
+> # load data set
+> data( "Mroz87", package = "sampleSelection" )
+> 
+> # create dummy variable for kids
+> Mroz87$kids <- as.numeric( Mroz87$kids5 > 0 | Mroz87$kids618 > 0 )
+> 
+> ### create categorical variable
+> Mroz87$lfp3 <- factor( ifelse( Mroz87$hours == 0, "no",
++   ifelse( Mroz87$hours <= 1300, "part", "full" ) ),
++   levels = c( "no", "part", "full" ) )
+> table( Mroz87$lfp3 )
+
+  no part full 
+ 325  204  224 
+> all.equal( Mroz87$lfp3 == "no", Mroz87$lfp == 0 )
+[1] TRUE
+> 
+> ### linear in age
+> estMLogitLin <- mlogit( lfp3 ~ 0 | kids + age + educ, data = Mroz87,
++   reflevel = "no", shape = "wide" )
+> summary( estMLogitLin )
+
+Call:
+mlogit(formula = lfp3 ~ 0 | kids + age + educ, data = Mroz87, 
+    reflevel = "no", shape = "wide", method = "nr", print.level = 0)
+
+Frequencies of alternatives:
+   no  full  part 
+0.432 0.297 0.271 
+
+nr method
+4 iterations, 0h:0m:0s 
+g'(-H)^-1g = 4.56E-05 
+successive function values within tolerance limits 
+
+Coefficients :
+                 Estimate Std. Error z-value Pr(>|z|)    
+full:(intercept)  -0.0810     0.8579   -0.09  0.92480    
+part:(intercept)  -1.6356     0.8883   -1.84  0.06559 .  
+full:kids         -0.7990     0.2296   -3.48  0.00050 ***
+part:kids         -0.1529     0.2436   -0.63  0.53014    
+full:age          -0.0379     0.0133   -2.85  0.00433 ** 
+part:age          -0.0236     0.0136   -1.73  0.08302 .  
+full:educ          0.1533     0.0407    3.77  0.00016 ***
+part:educ          0.1862     0.0420    4.43  9.2e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Log-Likelihood: -789
+McFadden R^2:  0.027 
+Likelihood ratio test : chisq = 43.7 (p.value = 8.31e-08)
+> # vector for permuting coefficients so that they are ordered in the same way 
+> # as expected by urbinEla()
+> coefPermuteLin <- c( seq( 1, 7, 2 ), seq( 2, 8, 2 ) )
+> # mean values of the explanatory variables
+> xMeanLin <- c( 1, colMeans( Mroz87[ , c( "kids", "age", "educ" ) ] ) )
+> # semi-elasticity of age without standard errors
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3, 
++   model = "mlogit", yCat = 0 )
+semEla  stdEr 
+0.3243     NA 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3, 
++   model = "mlogit", yCat = 1 )
+ semEla   stdEr 
+-0.2562      NA 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3, 
++   model = "mlogit", yCat = 2 )
+  semEla    stdEr 
+-0.06813       NA 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3, 
++   model = "mlogit", yCat = 0:1 )
+ semEla   stdEr 
+0.06813      NA 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3, 
++   model = "mlogit", yCat = 1:2 )
+ semEla   stdEr 
+-0.3243      NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, xPos = 3,
++     model = "mlogit", yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticity of age based on numerical derivation
+> Mroz87Lower <- as.data.frame( t( xMeanLin * c( 1, 1, 0.995, 1 ) ) )
+> Mroz87Lower$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mLower <- mlogit.data( Mroz87Lower, shape = "wide", 
++   choice = "lfp3" )
+> Mroz87Upper <- as.data.frame( t( xMeanLin * c( 1, 1, 1.005, 1 ) ) )
+> Mroz87Upper$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mUpper <- mlogit.data( Mroz87Upper, shape = "wide", 
++   choice = "lfp3" )
+> 100 * ( predict( estMLogitLin, newdata = Mroz87mUpper, type = "response" ) -
++     predict( estMLogitLin, newdata = Mroz87mLower, type = "response" ) )
+      no     full     part 
+ 0.32429 -0.25617 -0.06813 
+> # partial derivatives of the semi-elasticity wrt the coefficients
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   seSimplify = FALSE, model = "mlogit", yCat = 0 )$derivCoef
+[1]  0.013569  0.009443 -4.874550  0.166724 -0.058871 -0.040967 -7.479414
+[8] -0.723334
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   seSimplify = FALSE, model = "mlogit", yCat = 1 )$derivCoef
+[1] -0.10352 -0.07204  4.49431 -1.27193  0.08995  0.06259  0.38024  1.10521
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   seSimplify = FALSE, model = "mlogit", yCat = 2 )$derivCoef
+[1]  0.08995  0.06259  0.38024  1.10521 -0.03108 -0.02163  7.09918 -0.38187
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   seSimplify = FALSE, model = "mlogit", yCat = 0:1 )$derivCoef
+[1] -0.08995 -0.06259 -0.38024 -1.10521  0.03108  0.02163 -7.09918  0.38187
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   seSimplify = FALSE, model = "mlogit", yCat = 1:2 )$derivCoef
+[1] -0.013569 -0.009443  4.874550 -0.166724  0.058871  0.040967  7.479414
+[8]  0.723334
+> all.equal( rep( 0, 8 ),
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3,
++     seSimplify = FALSE, model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++   allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]          0.01357  0.009443   -4.875    0.1667         -0.05887  -0.04097
+     part:age part:educ
+[1,]   -7.479   -0.7233
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++   allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]          -0.1035  -0.07204    4.494    -1.272          0.08995   0.06259
+     part:age part:educ
+[1,]   0.3802     1.105
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++   allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]          0.08995   0.06259   0.3802     1.105         -0.03108  -0.02163
+     part:age part:educ
+[1,]    7.099   -0.3819
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++   allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]         -0.08995  -0.06259  -0.3802    -1.105          0.03108   0.02163
+     part:age part:educ
+[1,]   -7.099    0.3819
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++   allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]         -0.01357 -0.009443    4.875   -0.1667          0.05887   0.04097
+     part:age part:educ
+[1,]    7.479    0.7233
+> all.equal( rep( 0, 8 ), c( 
++   numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++     t0 = coef( estMLogitLin )[ coefPermuteLin ], 
++     allXVal = xMeanLin, xPos = 3, model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # simplified partial derivatives of the semi-elasticity wrt the coefficients
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   model = "mlogit", seSimplify = TRUE, yCat = 0 )$derivCoef
+[1]  0.000  0.000 -5.452  0.000  0.000  0.000 -4.975  0.000
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   model = "mlogit", seSimplify = TRUE, yCat = 1 )$derivCoef
+[1]  0.000  0.000  8.898  0.000  0.000  0.000 -3.446  0.000
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   model = "mlogit", seSimplify = TRUE, yCat = 2 )$derivCoef
+[1]  0.000  0.000 -3.446  0.000  0.000  0.000  8.421  0.000
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   model = "mlogit", seSimplify = TRUE, yCat = 0:1 )$derivCoef
+[1]  0.000  0.000  3.446  0.000  0.000  0.000 -8.421  0.000
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, 
++   model = "mlogit", seSimplify = TRUE, yCat = 1:2 )$derivCoef
+[1] 0.000 0.000 5.452 0.000 0.000 0.000 4.975 0.000
+> all.equal( rep( 0, 8 ),
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3,
++     model = "mlogit", seSimplify = TRUE, yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # semi-elasticity of age with standard errors (full covariance matrix)
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 0 )
+semEla  stdEr 
+0.3243 0.1186 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 1 )
+ semEla   stdEr 
+-0.2562  0.1065 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 2 )
+  semEla    stdEr 
+-0.06813  0.10335 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 0:1 )
+ semEla   stdEr 
+0.06813 0.10335 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 1:2 )
+ semEla   stdEr 
+-0.3243  0.1186 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++     vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], yCat = 0:2 )[
++       c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticity of age with standard errors (only standard errors)
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++   yCat = 0 )
+semEla  stdEr 
+0.3243 0.1361 
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++   yCat = 1 )
+ semEla   stdEr 
+-0.2562  0.1523 
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++   yCat = 2 )
+  semEla    stdEr 
+-0.06813  0.13640 
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++   yCat = 0:1 )
+ semEla   stdEr 
+0.06813 0.13640 
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++   yCat = 1:2 )
+ semEla   stdEr 
+-0.3243  0.1361 
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit",
++     sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], seSimplify = FALSE, 
++     yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+Warning message:
+In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> # semi-elasticity of age with standard errors (only standard errors, simplified)
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 0 )
+ semEla   stdEr 
+0.32429 0.09924 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 1 )
+ semEla   stdEr 
+-0.2562  0.1273 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 2 )
+  semEla    stdEr 
+-0.06813  0.12353 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 0:1 )
+ semEla   stdEr 
+0.06813 0.12353 
+> urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++   sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 1:2 )
+  semEla    stdEr 
+-0.32429  0.09924 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitLin )[ coefPermuteLin ], xMeanLin, 3, model = "mlogit", 
++     sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ], yCat = 0:2 )[ 
++       c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> 
+> ### quadratic in age
+> estMLogitQuad <- mlogit( lfp3 ~ 0 | kids + age + I(age^2) + educ, 
++   data = Mroz87, reflevel = "no", shape = "wide" )
+> summary( estMLogitQuad )
+
+Call:
+mlogit(formula = lfp3 ~ 0 | kids + age + I(age^2) + educ, data = Mroz87, 
+    reflevel = "no", shape = "wide", method = "nr", print.level = 0)
+
+Frequencies of alternatives:
+   no  full  part 
+0.432 0.297 0.271 
+
+nr method
+4 iterations, 0h:0m:0s 
+g'(-H)^-1g = 3.79E-05 
+successive function values within tolerance limits 
+
+Coefficients :
+                 Estimate Std. Error z-value Pr(>|z|)    
+full:(intercept) -7.84220    2.70423   -2.90  0.00373 ** 
+part:(intercept) -7.26604    2.75894   -2.63  0.00845 ** 
+full:kids        -1.00739    0.24177   -4.17  3.1e-05 ***
+part:kids        -0.33170    0.25895   -1.28  0.20022    
+full:age          0.34631    0.12753    2.72  0.00662 ** 
+part:age          0.25672    0.13105    1.96  0.05011 .  
+full:I(age^2)    -0.00453    0.00150   -3.02  0.00254 ** 
+part:I(age^2)    -0.00330    0.00155   -2.14  0.03256 *  
+full:educ         0.15714    0.04111    3.82  0.00013 ***
+part:educ         0.18867    0.04225    4.47  8.0e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Log-Likelihood: -784
+McFadden R^2:  0.0335 
+Likelihood ratio test : chisq = 54.3 (p.value = 5.95e-09)
+> # vector for permuting coefficients so that they are ordered in the same way 
+> # as expected by urbinEla()
+> coefPermuteQuad <- c( seq( 1, 9, 2 ), seq( 2, 10, 2 ) )
+> # mean values of the explanatory variables
+> xMeanQuad <- c( xMeanLin[ 1:3 ], xMeanLin[3]^2, xMeanLin[4] )
+> # semi-elasticity of age without standard errors
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", yCat = 0 )
+semEla  stdEr 
+0.3191     NA 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", yCat = 1 )
+ semEla   stdEr 
+-0.2692      NA 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", yCat = 2 )
+  semEla    stdEr 
+-0.04998       NA 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", yCat = 0:1 )
+ semEla   stdEr 
+0.04998      NA 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", yCat = 1:2 )
+ semEla   stdEr 
+-0.3191      NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), 
++   check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticity of age based on numerical derivation
+> Mroz87Lower <- as.data.frame( 
++   t( xMeanQuad * c( 1, 1, 0.995, 0.995^2, 1 ) ) )
+> Mroz87Lower$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mLower <- mlogit.data( Mroz87Lower, shape = "wide", 
++   choice = "lfp3" )
+> Mroz87Upper <- as.data.frame( 
++   t( xMeanQuad * c( 1, 1, 1.005, 1.005^2, 1 ) ) )
+> Mroz87Upper$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mUpper <- mlogit.data( Mroz87Upper, shape = "wide", 
++   choice = "lfp3" )
+> 100 * ( predict( estMLogitQuad, newdata = Mroz87mUpper, type = "response" ) -
++     predict( estMLogitQuad, newdata = Mroz87mLower, type = "response" ) )
+     no    full    part 
+ 0.3191 -0.2691 -0.0500 
+> # partial derivatives of the semi-elasticity wrt the coefficients
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = FALSE, yCat = 0 )$derivCoef
+ [1] -1.001e-02 -6.967e-03 -5.778e+00 -4.735e+02 -1.230e-01 -7.418e-02
+ [7] -5.162e-02 -7.698e+00 -5.207e+02 -9.114e-01
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = FALSE, yCat = 1 )$derivCoef
+ [1]   -0.08515   -0.05925    5.94795  660.10343   -1.04623    0.09516
+ [7]    0.06622   -0.16997 -186.65319    1.16925
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = FALSE, yCat = 2 )$derivCoef
+ [1]    0.09516    0.06622   -0.16997 -186.65319    1.16925   -0.02098
+ [7]   -0.01460    7.86763  707.31100   -0.25781
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = FALSE, yCat = 0:1 )$derivCoef
+ [1]   -0.09516   -0.06622    0.16997  186.65319   -1.16925    0.02098
+ [7]    0.01460   -7.86763 -707.31100    0.25781
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = FALSE, yCat = 1:2 )$derivCoef
+ [1] 1.001e-02 6.967e-03 5.778e+00 4.735e+02 1.230e-01 7.418e-02 5.162e-02
+ [8] 7.698e+00 5.207e+02 9.114e-01
+> all.equal( rep( 0, 10 ),
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", seSimplify = FALSE, yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.01001 -0.006967   -5.778        -473.5    -0.123
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]         -0.07418  -0.05162   -7.698        -520.7   -0.9114
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.08515  -0.05925    5.948         660.1    -1.046
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.09516   0.06622    -0.17        -186.7     1.169
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]          0.09516   0.06622    -0.17        -186.7     1.169
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]         -0.02098   -0.0146    7.868         707.3   -0.2578
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.09516  -0.06622     0.17         186.7    -1.169
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.02098    0.0146   -7.868        -707.3    0.2578
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]          0.01001  0.006967    5.778         473.5     0.123
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.07418   0.05162    7.698         520.7    0.9114
+> all.equal( rep( 0, 10 ), c(
++   numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
++     t0 = coef( estMLogitQuad )[ coefPermuteQuad ], 
++     allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # simplified partial derivatives of the semi-elasticity wrt the coefficients
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = TRUE, yCat = 0 )$derivCoef
+ [1]    0.000    0.000   -5.352 -455.334    0.000    0.000    0.000   -4.542
+ [9] -386.432    0.000
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = TRUE, yCat = 1 )$derivCoef
+ [1]    0.000    0.000    9.570  814.181    0.000    0.000    0.000   -4.218
+ [9] -358.846    0.000
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = TRUE, yCat = 2 )$derivCoef
+ [1]    0.000    0.000   -4.218 -358.846    0.000    0.000    0.000    8.760
+ [9]  745.278    0.000
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = TRUE, yCat = 0:1 )$derivCoef
+ [1]    0.000    0.000    4.218  358.846    0.000    0.000    0.000   -8.760
+ [9] -745.278    0.000
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", seSimplify = TRUE, yCat = 1:2 )$derivCoef
+ [1]   0.000   0.000   5.352 455.334   0.000   0.000   0.000   4.542 386.432
+[10]   0.000
+> all.equal( rep( 0, 10 ),
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", seSimplify = TRUE, yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # semi-elasticity of age with standard errors (full covariance matrix)
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 0 )
+semEla  stdEr 
+0.3191 0.1130 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 1 )
+ semEla   stdEr 
+-0.2692  0.1197 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 2 )
+  semEla    stdEr 
+-0.04998  0.11086 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 0:1 )
+ semEla   stdEr 
+0.04998 0.11086 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 1:2 )
+ semEla   stdEr 
+-0.3191  0.1130 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++     yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticity of age with standard errors (only standard errors)
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++   seSimplify = FALSE, yCat = 0 )
+semEla  stdEr 
+0.3191 1.6604 
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 0) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++   seSimplify = FALSE, yCat = 1 )
+ semEla   stdEr 
+-0.2692  1.3290 
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++   seSimplify = FALSE, yCat = 2 )
+  semEla    stdEr 
+-0.04998  1.55241 
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++   seSimplify = FALSE, yCat = 0:1 )
+ semEla   stdEr 
+0.04998 1.55241 
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 0:1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++   seSimplify = FALSE, yCat = 1:2 )
+ semEla   stdEr 
+-0.3191  1.6604 
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 1:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ], 
++     seSimplify = FALSE, yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), 
++   check.attributes = FALSE )
+[1] TRUE
+Warning messages:
+1: In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+2: In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], seSimplify = FALSE, yCat = 0:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> # semi-elasticity of age with standard errors (only standard errors, simplified)
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 0 )
+semEla  stdEr 
+0.3191 1.2820 
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 1 )
+ semEla   stdEr 
+-0.2692  1.8958 
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 2 )
+  semEla    stdEr 
+-0.04998  1.79571 
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 0:1 )
+ semEla   stdEr 
+0.04998 1.79571 
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0:1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 1:2 )
+ semEla   stdEr 
+-0.3191  1.2820 
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 1:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++     yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+Warning message:
+In urbinEla(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuad, xPos = c(3, 4), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> # semi-elasticity of age with standard errors (only standard errors, xMeanSd)
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++   seSimplify = FALSE, yCat = 0 )
+ semEla   stdEr 
+0.31913 0.06911 
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++   seSimplify = FALSE, yCat = 1 )
+ semEla   stdEr 
+-0.2692  0.1989 
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++   seSimplify = FALSE, yCat = 2 )
+  semEla    stdEr 
+-0.04998  0.17818 
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++   seSimplify = FALSE, yCat = 0:1 )
+ semEla   stdEr 
+0.04998 0.17818 
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++   seSimplify = FALSE, yCat = 1:2 )
+  semEla    stdEr 
+-0.31913  0.06911 
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
++     seSimplify = FALSE, yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), 
++   check.attributes = FALSE )
+[1] TRUE
+Warning message:
+In urbinEla(coef(estMLogitQuad)[coefPermuteQuad], xMeanQuad, c(3,  :
+  the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
+> # semi-elasticity of age with standard errors (only standard errors, xMeanSd, simplified)
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0 )
+semEla  stdEr 
+0.3191 0.1164 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 1 )
+ semEla   stdEr 
+-0.2692  0.1721 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 2 )
+  semEla    stdEr 
+-0.04998  0.16307 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0:1 )
+ semEla   stdEr 
+0.04998 0.16307 
+> urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 1:2 )
+ semEla   stdEr 
+-0.3191  0.1164 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEla( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuad, c( 3, 4 ), 
++     model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0:2 )[ 
++       c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticity of age based on partial derivatives calculated by the mfx package
+> # (differs from the above, because mean(age)^2 is not the same as mean(age^2))
+> # estMLogitQuadMfx <- logitmfx( lfp ~ kids + age + I(age^2) + educ, data = Mroz87 )
+> # estMLogitQuadMfx$mfxest[ "age", 1:2 ] * xMeanQuad[ "age" ] +
+> #   2 * estMLogitQuadMfx$mfxest[ "I(age^2)", 1:2 ] * xMeanQuad[ "age" ]^2
+> 
+> ### age is interval-coded (age is in the range 30-60)
+> # create dummy variables for age intervals
+> Mroz87$age30.37 <- Mroz87$age >= 30 & Mroz87$age <= 37
+> Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
+> Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
+> Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
+> all.equal( 
++   Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
++   rep( 1, nrow( Mroz87 ) ) )
+[1] TRUE
+> # estimation
+> estMLogitInt <- mlogit( lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ, 
++   data = Mroz87, reflevel = "no", shape = "wide" )
+> summary( estMLogitInt )
+
+Call:
+mlogit(formula = lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + 
+    educ, data = Mroz87, reflevel = "no", shape = "wide", method = "nr", 
+    print.level = 0)
+
+Frequencies of alternatives:
+   no  full  part 
+0.432 0.297 0.271 
+
+nr method
+4 iterations, 0h:0m:0s 
+g'(-H)^-1g = 0.000156 
+successive function values within tolerance limits 
+
+Coefficients :
+                  Estimate Std. Error z-value Pr(>|z|)    
+full:(intercept)   -1.7786     0.5283   -3.37  0.00076 ***
+part:(intercept)   -2.5688     0.5557   -4.62  3.8e-06 ***
+full:kids          -0.9126     0.2388   -3.82  0.00013 ***
+part:kids          -0.2448     0.2517   -0.97  0.33073    
+full:age30.37TRUE   0.3551     0.2459    1.44  0.14872    
+part:age30.37TRUE   0.0886     0.2433    0.36  0.71579    
+full:age38.44TRUE   0.3409     0.2618    1.30  0.19284    
+part:age38.44TRUE   0.0530     0.2625    0.20  0.83994    
+full:age53.60TRUE  -0.8297     0.3106   -2.67  0.00757 ** 
+part:age53.60TRUE  -0.8108     0.3369   -2.41  0.01609 *  
+full:educ           0.1592     0.0410    3.88  0.00010 ***
+part:educ           0.1907     0.0422    4.52  6.3e-06 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Log-Likelihood: -786
+McFadden R^2:  0.0312 
+Likelihood ratio test : chisq = 50.7 (p.value = 1.99e-07)
+> # vector for permuting coefficients so that they are ordered in the same way 
+> # as expected by urbinEla()
+> coefPermuteInt <- c( seq( 1, 11, 2 ), seq( 2, 12, 2 ) )
+> # mean values of the explanatory variables
+> xMeanInt <- c( xMeanLin[1:2], mean( Mroz87$age30.37 ), 
++   mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMeanLin[4] )
+> # semi-elasticity of age without standard errors
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0 )
+semEla  stdEr 
+0.3774     NA 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1 )
+ semEla   stdEr 
+-0.2512      NA 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 2 )
+ semEla   stdEr 
+-0.1262      NA 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:1 )
+semEla  stdEr 
+0.1262     NA 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1:2 )
+ semEla   stdEr 
+-0.3774      NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++     c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:2 )[
++       c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # semi-elasticities based on numerical derivation
+> Mroz87Lower <- Mroz87
+> Mroz87Lower$age <- Mroz87$age * 0.95
+> Mroz87Lower$age30.37 <- Mroz87Lower$age <= 37.5
+> Mroz87Lower$age38.44 <- Mroz87Lower$age > 37.5 & Mroz87Lower$age <= 44.5
+> Mroz87Lower$age45.52 <- Mroz87Lower$age > 44.5 & Mroz87Lower$age <= 52.5
+> Mroz87Lower$age53.60 <- Mroz87Lower$age > 52.5 
+> all.equal( 
++   Mroz87Lower$age30.37 + Mroz87Lower$age38.44 + Mroz87Lower$age45.52 + 
++     Mroz87Lower$age53.60, rep( 1, nrow( Mroz87 ) ) )
+[1] TRUE
+> Mroz87Lower$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mLower <- mlogit.data( Mroz87Lower, shape = "wide", 
++   choice = "lfp3" )
+> Mroz87Upper <- Mroz87
+> Mroz87Upper$age <- Mroz87$age * 1.05
+> Mroz87Upper$age30.37 <- Mroz87Upper$age <= 37.5
+> Mroz87Upper$age38.44 <- Mroz87Upper$age > 37.5 & Mroz87Upper$age <= 44.5
+> Mroz87Upper$age45.52 <- Mroz87Upper$age > 44.5 & Mroz87Upper$age <= 52.5
+> Mroz87Upper$age53.60 <- Mroz87Upper$age > 52.5 
+> all.equal( 
++   Mroz87Upper$age30.37 + Mroz87Upper$age38.44 + Mroz87Upper$age45.52 + 
++     Mroz87Upper$age53.60, rep( 1, nrow( Mroz87 ) ) )
+[1] TRUE
+> Mroz87Upper$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mUpper <- mlogit.data( Mroz87Upper, shape = "wide", 
++   choice = "lfp3" )
+> 10 * ( colMeans( 
++   predict( estMLogitInt, newdata = Mroz87mUpper, type = "response" ) ) -
++     colMeans(
++       predict( estMLogitInt, newdata = Mroz87mLower, type = "response" ) ) )
+      no     full     part 
+ 0.35009 -0.25792 -0.09217 
+> Mroz87mLowerMean <- Mroz87mLower
+> Mroz87mUpperMean <- Mroz87mUpper
+> Mroz87mLowerMean$kids <- Mroz87mUpperMean$kids <- xMeanInt[ "kids" ]
+> Mroz87mLowerMean$educ <- Mroz87mUpperMean$educ <- xMeanInt[ "educ" ]
+> 10 * ( colMeans( 
++   predict( estMLogitInt, newdata = Mroz87mUpperMean, type = "response" ) ) -
++     colMeans(
++       predict( estMLogitInt, newdata = Mroz87mLowerMean, type = "response" ) ) )
+     no    full    part 
+ 0.3688 -0.2512 -0.1176 
+> # partial derivatives of the semi-elasticity wrt the coefficients
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0 )$derivCoef
+ [1]  0.02852  0.01985  0.18926  0.01703 -0.16111  0.35041 -0.02456 -0.01709
+ [9]  0.15428  0.01359 -0.17470 -0.30177
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1 )$derivCoef
+ [1] -0.12037 -0.08376 -0.32843 -0.02912  0.20931 -1.47891  0.09185  0.06391
+ [9]  0.13917  0.01209 -0.04820  1.12850
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 2 )$derivCoef
+ [1]  0.09185  0.06391  0.13917  0.01209 -0.04820  1.12850 -0.06729 -0.04682
+ [9] -0.29345 -0.02568  0.22290 -0.82673
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:1 )$derivCoef
+ [1] -0.09185 -0.06391 -0.13917 -0.01209  0.04820 -1.12850  0.06729  0.04682
+ [9]  0.29345  0.02568 -0.22290  0.82673
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1:2 )$derivCoef
+ [1] -0.02852 -0.01985 -0.18926 -0.01703  0.16111 -0.35041  0.02456  0.01709
+ [9] -0.15428 -0.01359  0.17470  0.30177
+> all.equal( rep( 0, 12 ),
++   urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++     c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++   allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++   xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          0.02852   0.01985            0.1893           0.01703
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           -0.1611    0.3504         -0.02456  -0.01709            0.1543
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.01359           -0.1747   -0.3018
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++   allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++   xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          -0.1204  -0.08376           -0.3284          -0.02912
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.2093    -1.479          0.09185   0.06391            0.1392
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.01209           -0.0482     1.128
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++   allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++   xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          0.09185   0.06391            0.1392           0.01209
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           -0.0482     1.128         -0.06729  -0.04682           -0.2934
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.02568            0.2229   -0.8267
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++   allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++   xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]         -0.09185  -0.06391           -0.1392          -0.01209
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.0482    -1.128          0.06729   0.04682            0.2934
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.02568           -0.2229    0.8267
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++   allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++   xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]         -0.02852  -0.01985           -0.1893          -0.01703
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.1611   -0.3504          0.02456   0.01709           -0.1543
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.01359            0.1747    0.3018
+> all.equal( rep( 0, 12 ), c(
++   numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
++     t0 = coef( estMLogitInt )[ coefPermuteInt ], 
++     allXVal = xMeanInt, xPos = c( 3, 4, 0, 5 ), 
++     xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # semi-elasticity of age with standard errors (full covariance matrix)
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++   yCat = 0 )
+semEla  stdEr 
+0.3774 0.1021 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++   yCat = 1 )
+  semEla    stdEr 
+-0.25125  0.08043 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++   yCat = 2 )
+  semEla    stdEr 
+-0.12618  0.08437 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++   yCat = 0:1 )
+ semEla   stdEr 
+0.12618 0.08437 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++   yCat = 1:2 )
+ semEla   stdEr 
+-0.3774  0.1021 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++     c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++     allCoefVcov = vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ],
++     yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), check.attributes = FALSE ) 
+[1] TRUE
+> # semi-elasticity of age with standard errors (only standard errors)
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++   yCat = 0 )
+semEla  stdEr 
+0.3774 0.1020 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++   yCat = 1 )
+ semEla   stdEr 
+-0.2512  0.1596 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++   yCat = 2 )
+ semEla   stdEr 
+-0.1262  0.1402 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++   yCat = 0:1 )
+semEla  stdEr 
+0.1262 0.1402 
+> urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++   allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++   yCat = 1:2 )
+ semEla   stdEr 
+-0.3774  0.1020 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinElaInt( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt,
++     c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
++     allCoefVcov = sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ],
++     yCat = 0:2 )[ c( "semEla", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> 
+> 
+> ### effect of age changing between discrete intervals 
+> ### if age is used as linear explanatory variable 
+> # mean values of the 'other' explanatory variables
+> xMeanLinInt <- c( xMeanLin[ 1:2 ], NA, xMeanLin[4] )
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # without standard errors
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++   yCat = 0 )
+effect  stdEr 
+ 0.152     NA 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++   yCat = 1 )
+ effect   stdEr 
+-0.1175      NA 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++   yCat = 2 )
+  effect    stdEr 
+-0.03458       NA 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++   yCat = 0:1 )
+ effect   stdEr 
+0.03458      NA 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++   yCat = 1:2 )
+effect  stdEr 
+-0.152     NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++     xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit",
++     yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # based on predicted values
+> Mroz87Ref <- as.data.frame( t( replace( xMeanLin, 3, 35 ) ) )
+> Mroz87Ref$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mRef <- mlogit.data( Mroz87Ref, shape = "wide", 
++   choice = "lfp3" )
+> Mroz87Int <- as.data.frame( t( replace( xMeanLin, 3, 55 ) ) )
+> Mroz87Int$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mInt <- mlogit.data( Mroz87Int, shape = "wide", 
++   choice = "lfp3" )
+> predict( estMLogitLin, newdata = Mroz87mInt, type = "response" ) -
++   predict( estMLogitLin, newdata = Mroz87mRef, type = "response" )
+      no     full     part 
+ 0.15205 -0.11747 -0.03458 
+> # partial derivatives of the semi-elasticity wrt the coefficients
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0 )$derivCoef
+[1]  0.009378  0.006526 -2.056823  0.115227 -0.024719 -0.017202 -3.467033
+[8] -0.303721
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 1 )$derivCoef
+[1] -0.05036 -0.03505  1.74563 -0.61880  0.04098  0.02852  0.31119  0.50357
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 2 )$derivCoef
+[1]  0.04098  0.02852  0.31119  0.50357 -0.01627 -0.01132  3.15584 -0.19985
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0:1 )$derivCoef
+[1] -0.04098 -0.02852 -0.31119 -0.50357  0.01627  0.01132 -3.15584  0.19985
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 1:2 )$derivCoef
+[1] -0.009378 -0.006526  2.056823 -0.115227  0.024719  0.017202  3.467033
+[8]  0.303721
+> all.equal( rep( 0, 8 ),
++   urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++     c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ],
++   allXVal = xMeanLinInt, xPos = 3,
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]         0.009378  0.006526   -2.057    0.1152         -0.02472   -0.0172
+     part:age part:educ
+[1,]   -3.467   -0.3037
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ],
++   allXVal = xMeanLinInt, xPos = 3,
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]         -0.05036  -0.03505    1.746   -0.6188          0.04098   0.02852
+     part:age part:educ
+[1,]   0.3112    0.5036
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ],
++   allXVal = xMeanLinInt, xPos = 3,
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]          0.04098   0.02852   0.3112    0.5036         -0.01627  -0.01132
+     part:age part:educ
+[1,]    3.156   -0.1998
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ],
++   allXVal = xMeanLinInt, xPos = 3,
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]         -0.04098  -0.02852  -0.3112   -0.5036          0.01627   0.01132
+     part:age part:educ
+[1,]   -3.156    0.1998
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitLin )[ coefPermuteLin ],
++   allXVal = xMeanLinInt, xPos = 3,
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age full:educ part:(intercept) part:kids
+[1,]        -0.009378 -0.006526    2.057   -0.1152          0.02472    0.0172
+     part:age part:educ
+[1,]    3.467    0.3037
+> all.equal( rep( 0, 8 ), c(
++   numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++     t0 = coef( estMLogitLin )[ coefPermuteLin ],
++     allXVal = xMeanLinInt, xPos = 3,
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # (full covariance matrix) 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++   yCat = 0 )
+ effect   stdEr 
+0.15205 0.05541 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++   yCat = 1 )
+  effect    stdEr 
+-0.11747  0.04657 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++   yCat = 2 )
+  effect    stdEr 
+-0.03458  0.04733 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++   yCat = 0:1 )
+ effect   stdEr 
+0.03458 0.04733 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++   yCat = 1:2 )
+  effect    stdEr 
+-0.15205  0.05541 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], xMeanLinInt, 3,
++     c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++     allCoefVcov = vcov( estMLogitLin )[ coefPermuteLin, coefPermuteLin ], 
++     yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # (only standard errors) 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++   yCat = 0 )
+ effect   stdEr 
+0.15205 0.06107 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++   yCat = 1 )
+ effect   stdEr 
+-0.1175  0.0703 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++   yCat = 2 )
+  effect    stdEr 
+-0.03458  0.06205 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++   yCat = 0:1 )
+ effect   stdEr 
+0.03458 0.06205 
+> urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++   xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++   yCat = 1:2 )
+  effect    stdEr 
+-0.15205  0.06107 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffInt( coef( estMLogitLin )[ coefPermuteLin ], allXVal = xMeanLinInt, 
++     xPos = 3, refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", 
++     allCoefVcov = sqrt( diag( vcov( estMLogitLin ) ) )[ coefPermuteLin ],
++     yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> 
+> 
+> ### effect of age changing between discrete intervals 
+> ### if age is used as linear and quadratic explanatory variable 
+> # mean values of the 'other' explanatory variables
+> xMeanQuadInt <- c( xMeanLin[ 1:2 ], NA, NA, xMeanLin[4] )
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # without standard errors
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", yCat = 0 )
+effect  stdEr 
+0.2491     NA 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", yCat = 1 )
+ effect   stdEr 
+-0.1753      NA 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", yCat = 2 )
+  effect    stdEr 
+-0.07382       NA 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", yCat = 0:1 )
+ effect   stdEr 
+0.07382      NA 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", yCat = 1:2 )
+ effect   stdEr 
+-0.2491      NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++     xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++     model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), 
++   check.attributes = FALSE )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # based on predicted values
+> Mroz87Ref <- as.data.frame( t( replace( xMeanQuad, 3:4, c( 35, 35^2 ) ) ) )
+> Mroz87Ref$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mRef <- mlogit.data( Mroz87Ref, shape = "wide", 
++   choice = "lfp3" )
+> Mroz87Int <- as.data.frame( t( replace( xMeanQuad, 3:4, c( 55, 55^2 ) ) ) )
+> Mroz87Int$lfp3 <- factor( "no", levels = levels( Mroz87$lfp3 ) )
+> Mroz87mInt <- mlogit.data( Mroz87Int, shape = "wide", 
++   choice = "lfp3" )
+> predict( estMLogitQuad, newdata = Mroz87mInt, type = "response" ) -
++   predict( estMLogitQuad, newdata = Mroz87mRef, type = "response" )
+      no     full     part 
+ 0.24919 -0.17672 -0.07247 
+> # partial derivatives of the effect wrt the coefficients
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0 )$derivCoef
+ [1]    0.02298    0.01599   -1.29640 -160.72167    0.28236   -0.02489
+ [7]   -0.01732   -3.47902 -265.40716   -0.30581
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 1 )$derivCoef
+ [1]  -0.08523  -0.05931  -0.17123 147.93976  -1.04716   0.06225   0.04332
+ [8]   1.46763  12.78191   0.76481
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 2 )$derivCoef
+ [1]   0.06225   0.04332   1.46763  12.78191   0.76481  -0.03736  -0.02600
+ [8]   2.01139 252.62525  -0.45899
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0:1 )$derivCoef
+ [1]   -0.06225   -0.04332   -1.46763  -12.78191   -0.76481    0.03736
+ [7]    0.02600   -2.01139 -252.62525    0.45899
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 1:2 )$derivCoef
+ [1]  -0.02298  -0.01599   1.29640 160.72167  -0.28236   0.02489   0.01732
+ [8]   3.47902 265.40716   0.30581
+> all.equal( rep( 0, 10 ),
++   urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++     c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the effect wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]          0.02298   0.01599   -1.296        -160.7    0.2824
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]         -0.02489  -0.01732   -3.479        -265.4   -0.3058
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.08523  -0.05931  -0.1712         147.9    -1.047
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.06225   0.04332    1.468         12.78    0.7648
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]          0.06225   0.04332    1.468         12.78    0.7648
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]         -0.03736    -0.026    2.011         252.6    -0.459
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.06225  -0.04332   -1.468        -12.78   -0.7648
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.03736     0.026   -2.011        -252.6     0.459
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++   t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age full:I(age^2) full:educ
+[1,]         -0.02298  -0.01599    1.296         160.7   -0.2824
+     part:(intercept) part:kids part:age part:I(age^2) part:educ
+[1,]          0.02489   0.01732    3.479         265.4    0.3058
+> all.equal( rep( 0, 10 ), c(
++   numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
++     t0 = coef( estMLogitQuad )[ coefPermuteQuad ],
++     allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # (full covariance matrix) 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 0 )
+ effect   stdEr 
+0.24907 0.06262 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 1 )
+  effect    stdEr 
+-0.17525  0.04818 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 2 )
+  effect    stdEr 
+-0.07382  0.05322 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 0:1 )
+ effect   stdEr 
+0.07382 0.05322 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++   c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++   yCat = 1:2 )
+  effect    stdEr 
+-0.24907  0.06262 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, 
++     c( 3, 4 ), c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++     allCoefVcov = vcov( estMLogitQuad )[ coefPermuteQuad, coefPermuteQuad ],
++     yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # (only standard errors) 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 0 )
+effect  stdEr 
+0.2491 0.6860 
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 1 )
+ effect   stdEr 
+-0.1753  0.4158 
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 2 )
+  effect    stdEr 
+-0.07382  0.54580 
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 0:1 )
+ effect   stdEr 
+0.07382 0.54580 
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0:1) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++   model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   yCat = 1:2 )
+ effect   stdEr 
+-0.2491  0.6860 
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 1:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], allXVal = xMeanQuadInt, 
++     xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
++     model = "mlogit", sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++     yCat = 0:2 )[ c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+Warning message:
+In urbinEffInt(allCoef = coef(estMLogitQuad)[coefPermuteQuad], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "mlogit", allCoefVcov = sqrt(diag(vcov(estMLogitQuad)))[coefPermuteQuad], yCat = 0:2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> # effects of age changing from the 30-40 interval to the 50-60 interval
+> # (standard errors + mean value and standard deviation of age)
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0 )
+effect  stdEr 
+0.2491 0.0566 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 1 )
+  effect    stdEr 
+-0.17525  0.06915 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 2 )
+  effect    stdEr 
+-0.07382  0.07777 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0:1 )
+ effect   stdEr 
+0.07382 0.07777 
+> urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++   c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++   allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 1:2 )
+ effect   stdEr 
+-0.2491  0.0566 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffInt( coef( estMLogitQuad )[ coefPermuteQuad ], xMeanQuadInt, c( 3, 4 ),
++     c( 30, 40 ), c( 50, 60 ), model = "mlogit", 
++     allCoefVcov = sqrt( diag( vcov( estMLogitQuad ) ) )[ coefPermuteQuad ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ), yCat = 0:2 )[
++       c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> 
+> 
+> ### grouping and re-basing categorical variables
+> ### effects of age changing from the 30-44 category to the 53-60 category
+> # without standard errors
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0 )
+effect  stdEr 
+0.2534     NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 1 )
+ effect   stdEr 
+-0.1669      NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 2 )
+  effect    stdEr 
+-0.08649       NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0:1 )
+ effect   stdEr 
+0.08649      NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 1:2 )
+ effect   stdEr 
+-0.2534      NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++     xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0:2 )[
++       c( "effect", "stdEr" ) ] ), check.attributes = FALSE )
+[1] TRUE
+> # effects calculated based on predicted values
+> names( xMeanInt ) <- 
++   gsub( "TRUE|full:", "", names( coef( estMLogitInt )[ seq( 1, 11, 2 ) ] ) )
+> df30.37 <- df38.44 <- df45.52 <- df53.60 <- as.data.frame( t( xMeanInt ) ) 
+> df30.37[ , 3:5 ] <- c( TRUE, FALSE, FALSE )
+> df38.44[ , 3:5 ] <- c( FALSE, TRUE, FALSE )
+> df45.52[ , 3:5 ] <- c( FALSE, FALSE, FALSE )
+> df53.60[ , 3:5 ] <- c( FALSE, FALSE, TRUE )
+> df30.37$lfp3 <- df38.44$lfp3 <- df45.52$lfp3 <- df53.60$lfp3 <- 
++   factor( "no", levels = levels( Mroz87$lfp3 ) )
+> df30.37m <- mlogit.data( df30.37, shape = "wide", choice = "lfp3" )
+> df38.44m <- mlogit.data( df38.44, shape = "wide", choice = "lfp3" )
+> df45.52m <- mlogit.data( df45.52, shape = "wide", choice = "lfp3" )
+> df53.60m <- mlogit.data( df53.60, shape = "wide", choice = "lfp3" )
+> predict( estMLogitInt, newdata = df53.60m, type = "response" ) -
++   sum( Mroz87$age30.37 ) / sum( Mroz87$age30.37 + Mroz87$age38.44 ) *
++   predict( estMLogitInt, newdata = df30.37m, type = "response" ) -
++   sum( Mroz87$age38.44 ) / sum( Mroz87$age30.37 + Mroz87$age38.44 ) *
++   predict( estMLogitInt, newdata = df38.44m, type = "response" )
+     no    full    part 
+ 0.2534 -0.1669 -0.0865 
+> # partial derivatives of the effect wrt the coefficients
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0 )$derivCoef
+ [1]  0.01930  0.01343  0.07671  0.05379 -0.11121  0.23708 -0.01514 -0.01054
+ [9]  0.06198  0.04346 -0.12059 -0.18604
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 1 )$derivCoef
+ [1] -0.08059 -0.05608 -0.13230 -0.09277  0.14448 -0.99024  0.06130  0.04266
+ [9]  0.05559  0.03898 -0.03327  0.75316
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 2 )$derivCoef
+ [1]  0.06130  0.04266  0.05559  0.03898 -0.03327  0.75316 -0.04616 -0.03212
+ [9] -0.11757 -0.08244  0.15386 -0.56712
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0:1 )$derivCoef
+ [1] -0.06130 -0.04266 -0.05559 -0.03898  0.03327 -0.75316  0.04616  0.03212
+ [9]  0.11757  0.08244 -0.15386  0.56712
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 1:2 )$derivCoef
+ [1] -0.01930 -0.01343 -0.07671 -0.05379  0.11121 -0.23708  0.01514  0.01054
+ [9] -0.06198 -0.04346  0.12059  0.18604
+> all.equal( rep( 0, 12 ),
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++     c( 3:5 ), c( -1, -1, 1, 0 ), model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the effect wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++   model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]           0.0193   0.01343           0.07671           0.05379
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           -0.1112    0.2371         -0.01514  -0.01054           0.06198
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.04346           -0.1206    -0.186
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++   model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]         -0.08059  -0.05608           -0.1323          -0.09277
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.1445   -0.9902           0.0613   0.04266           0.05559
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.03898          -0.03327    0.7532
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++   model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]           0.0613   0.04266           0.05559           0.03898
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]          -0.03327    0.7532         -0.04616  -0.03212           -0.1176
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.08244            0.1539   -0.5671
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++   model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          -0.0613  -0.04266          -0.05559          -0.03898
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           0.03327   -0.7532          0.04616   0.03212            0.1176
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.08244           -0.1539    0.5671
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++   model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          -0.0193  -0.01343          -0.07671          -0.05379
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.1112   -0.2371          0.01514   0.01054          -0.06198
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.04346            0.1206     0.186
+> all.equal( rep( 0, 12 ), c(
++   numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++     t0 = coef( estMLogitInt )[ coefPermuteInt ],
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++     model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # with full covariance matrix
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 0 )
+ effect   stdEr 
+0.25344 0.06612 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 1 )
+  effect    stdEr 
+-0.16695  0.05016 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 2 )
+  effect    stdEr 
+-0.08649  0.05409 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 0:1 )
+ effect   stdEr 
+0.08649 0.05409 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 1:2 )
+  effect    stdEr 
+-0.25344  0.06612 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++     c( -1, -1, 1, 0 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++     model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> # with standard errors only
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 0 )
+ effect   stdEr 
+0.25344 0.06406 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 1 )
+ effect   stdEr 
+-0.1669  0.1000 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 2 )
+  effect    stdEr 
+-0.08649  0.08816 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 0:1 )
+ effect   stdEr 
+0.08649 0.08816 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 1:2 )
+  effect    stdEr 
+-0.25344  0.06406 
+> all.equal( rep( 0, 2 ), unlist( 
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++     c( -1, -1, 1, 0 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++     model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> ### effects of age changing from the 53-60 category to the 38-52 category
+> # without standard errors
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0 )
+ effect   stdEr 
+-0.2221      NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), model = "mlogit", yCat = 1 )
+effect  stdEr 
+0.1277     NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), model = "mlogit", yCat = 2 )
+ effect   stdEr 
+0.09439      NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0:1 )
+  effect    stdEr 
+-0.09439       NA 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), model = "mlogit", yCat = 1:2 )
+effect  stdEr 
+0.2221     NA 
+> all.equal( c( 0, NA ), unlist(
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++     c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> # effects calculated based on predicted values
+> sum( Mroz87$age38.44 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
++   predict( estMLogitInt, newdata = df38.44m, type = "response" ) +
++   sum( Mroz87$age45.52 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
++   predict( estMLogitInt, newdata = df45.52m, type = "response" ) -
++   predict( estMLogitInt, newdata = df53.60m, type = "response" )
+      no     full     part 
+-0.22245  0.12867  0.09378 
+> # partial derivatives of the effect wrt the coefficients
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0 )$derivCoef
+ [1] -0.013811 -0.009611  0.000000 -0.054330  0.111209 -0.169700  0.003202
+ [8]  0.002228  0.000000 -0.051013  0.120589  0.039344
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 1 )$derivCoef
+ [1]  0.06664  0.04637  0.00000  0.09174 -0.14448  0.81881 -0.05283 -0.03676
+ [9]  0.00000 -0.03741  0.03327 -0.64911
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 2 )$derivCoef
+ [1] -0.05283 -0.03676  0.00000 -0.03741  0.03327 -0.64911  0.04963  0.03453
+ [9]  0.00000  0.08843 -0.15386  0.60977
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0:1 )$derivCoef
+ [1]  0.05283  0.03676  0.00000  0.03741 -0.03327  0.64911 -0.04963 -0.03453
+ [9]  0.00000 -0.08843  0.15386 -0.60977
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++   c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 1:2 )$derivCoef
+ [1]  0.013811  0.009611  0.000000  0.054330 -0.111209  0.169700 -0.003202
+ [8] -0.002228  0.000000  0.051013 -0.120589 -0.039344
+> all.equal( rep( 0, 12 ),
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, 
++     c( 3:5 ), c( 0, 1, -1, 1 ), model = "mlogit", yCat = 0:2 )$derivCoef )
+[1] TRUE
+> # numerically computed partial derivatives of the effect wrt the coefficients
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   model = "mlogit", yCat = 0 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]         -0.01381 -0.009611                 0          -0.05433
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]            0.1112   -0.1697         0.003202  0.002228                 0
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.05101            0.1206   0.03934
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   model = "mlogit", yCat = 1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          0.06664   0.04637                 0           0.09174
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           -0.1445    0.8188         -0.05283  -0.03676                 0
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.03741           0.03327   -0.6491
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   model = "mlogit", yCat = 2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]         -0.05283  -0.03676                 0          -0.03741
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           0.03327   -0.6491          0.04963   0.03453                 0
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.08843           -0.1539    0.6098
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   model = "mlogit", yCat = 0:1 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          0.05283   0.03676                 0           0.03741
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]          -0.03327    0.6491         -0.04963  -0.03453                 0
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]          -0.08843            0.1539   -0.6098
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++   t0 = coef( estMLogitInt )[ coefPermuteInt ],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   model = "mlogit", yCat = 1:2 )
+     full:(intercept) full:kids full:age30.37TRUE full:age38.44TRUE
+[1,]          0.01381  0.009611                 0           0.05433
+     full:age53.60TRUE full:educ part:(intercept) part:kids part:age30.37TRUE
+[1,]           -0.1112    0.1697        -0.003202 -0.002228                 0
+     part:age38.44TRUE part:age53.60TRUE part:educ
+[1,]           0.05101           -0.1206  -0.03934
+> all.equal( rep( 0, 12 ), c(
++   numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
++     t0 = coef( estMLogitInt )[ coefPermuteInt ],
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++     model = "mlogit", yCat = 0:2 ) ) )
+[1] TRUE
+> # with full covariance matrix
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 0 )
+  effect    stdEr 
+-0.22205  0.06141 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 1 )
+ effect   stdEr 
+0.12766 0.04451 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 2 )
+ effect   stdEr 
+0.09439 0.05058 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 0:1 )
+  effect    stdEr 
+-0.09439  0.05058 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++   model = "mlogit", yCat = 1:2 )
+ effect   stdEr 
+0.22205 0.06141 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++     c( 0, 1, -1, 1 ), vcov( estMLogitInt )[ coefPermuteInt, coefPermuteInt ], 
++     model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> # with standard errors only
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 0 )
+  effect    stdEr 
+-0.22205  0.05778 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 1 )
+ effect   stdEr 
+0.12766 0.08367 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 2 )
+ effect   stdEr 
+0.09439 0.08056 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 0:1 )
+  effect    stdEr 
+-0.09439  0.08056 
+> urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++   c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++   model = "mlogit", yCat = 1:2 )
+ effect   stdEr 
+0.22205 0.05778 
+> all.equal( rep( 0, 2 ), unlist(
++   urbinEffCat( coef( estMLogitInt )[ coefPermuteInt ], xMeanInt, c( 3:5 ), 
++     c( 0, 1, -1, 1 ), sqrt( diag( vcov( estMLogitInt ) ) )[ coefPermuteInt ], 
++     model = "mlogit", yCat = 0:2 )[ c( "effect", "stdEr" ) ] ),
++   check.attributes = FALSE )
+[1] TRUE
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  0.948   0.036   0.978 

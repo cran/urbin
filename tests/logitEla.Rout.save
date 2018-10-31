@@ -1,0 +1,93 @@
+
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library( "urbin" )
+Loading required package: miscTools
+> 
+> ela6a <- urbinEla( allCoef = c( 0.445, 0.03, 0.00002, 0.067, 0.89, 0.124 ),
++   allXVal = c( 1, 3.3, 4.5, 2.34, 0.1, 0.987 ), xPos = 2, model = "logit" )
+> ela6a
+    semEla      stdEr 
+0.02023896         NA 
+> 
+> ela6b <- urbinEla( allCoef = c( 0.445, 0.03, 0.00002, 0.067, 0.89, 0.124 ),
++   allXVal = c( 1, 3.3, 4.5, 2.24, 0.1, 0.987 ), 
++   allCoefVcov = c( 0.001, 0.02, 0.000002, 0.05, 1.2, 0.03 ), 
++   xPos = 2, model = "logit" )
+> ela6b  
+    semEla      stdEr 
+0.02029675 0.01353117 
+> 
+> # Example 
+> ela7a <- urbinEla( allCoef = c( 0.445, 0.03, 0.00002, 0.067, 0.89, 0.124 ),
++   allXVal = c( 1, 3.3, 3.3^2, 2.34, 0.1, 0.987 ), 
++   xPos = c( 2, 3 ), model = "logit" )
+> ela7a
+    semEla      stdEr 
+0.02032691         NA 
+> 
+> ela7b <- urbinEla( allCoef = c( 0.445, 0.03, 0.00002, 0.067, 0.89, 0.124 ),
++   allXVal = c( 1, 3.3, 3.3^2, 2.34, 0.1, 0.987 ), 
++   allCoefVcov = c( 0.001, 0.02, 0.000002, 0.05, 1.2, 0.03 ),
++   xPos = c( 2, 3 ), model = "logit" )
+Warning message:
+In urbinEla(allCoef = c(0.445, 0.03, 2e-05, 0.067, 0.89, 0.124), allXVal = c(1, 3.3, 3.3^2, 2.34, 0.1, 0.987), xPos = c(2, 3), model = "logit", allCoefVcov = c(0.001, 0.02, 2e-06, 0.05, 1.2, 0.03)) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> ela7b
+    semEla      stdEr 
+0.02032691 0.01349191 
+> 
+> # Example
+> ela8a <- urbinEla( allCoef = c( 0.2, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, 8.4, 0.06 ), xPos = 3,
++   model = "mlogit", yCat = 2 )
+> ela8a
+      semEla        stdEr 
+0.0004508535           NA 
+> 
+> ela8b <- urbinEla( allCoef = c( 0.2, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, 8.4, 0.06 ), 
++   allCoefVcov = c( 0.002, 0.003, 0.004, 0.006, 0.00001, 0.08 ), 
++   xPos = 3, 
++   model = "mlogit", yCat = 2 )
+> ela8b
+      semEla        stdEr 
+0.0004508535 0.0002776620 
+> 
+> # Example
+> ela9a <- urbinEla( allCoef = c( 0.2, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, 0.04, 0.0016 ), xPos = c( 2, 3 ),
++   model = "mlogit", yCat = 2 )
+> ela9a
+       semEla         stdEr 
+-0.0008640351            NA 
+> 
+> ela9b <- urbinEla( allCoef = c( 0.2, 0.3, 0.5, -0.2, 0.03, 0.6 ), 
++   allXVal = c( 1, 0.04, 0.0016 ), 
++   allCoefVcov = c( 0.002, 0.003, 0.004, 0.006, 0.00001, 0.08 ), 
++   xPos = c( 2, 3 ), 
++   model = "mlogit", yCat = 2 )
+Warning message:
+In urbinEla(allCoef = c(0.2, 0.3, 0.5, -0.2, 0.03, 0.6), allXVal = c(1, 0.04, 0.0016), xPos = c(2, 3), model = "mlogit", allCoefVcov = c(0.002, 0.003, 0.004, 0.006, 1e-05, 0.08), yCat = 2) :
+  the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
+> ela9b
+       semEla         stdEr 
+-8.640351e-04  5.194184e-05 
+> 
+> proc.time()
+   user  system elapsed 
+  0.097   0.020   0.110 

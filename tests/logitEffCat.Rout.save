@@ -1,0 +1,61 @@
+
+R version 3.5.1 (2018-07-02) -- "Feather Spray"
+Copyright (C) 2018 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library( "urbin" )
+Loading required package: miscTools
+> 
+> # Example
+> eff10a <- urbinEffCat( allCoef = c( 0.28, 0.003, 0.175, -0.034, 
++   -0.05, 0.89, -1.2 ), 
++   allXVal = c( 1, 0.1, 0.3, 0.15, 0.2, 0.34, 0.8 ), model = "logit", 
++   xPos = c( 2:5 ), xGroups = c( 0, -1, 1, 1, -1 ) )
+> eff10a
+     effect       stdEr 
+-0.03359003          NA 
+> 
+> eff10b <- urbinEffCat( allCoef = c( 0.28, 0.003, 0.175, -0.034, 
++   -0.05, 0.89, -1.2 ), 
++   allXVal = c( 1, 0.1, 0.3, 0.15, 0.2, 0.34, 0.8 ), 
++   xPos = c( 2:5 ), xGroups = c( 0, -1, 1, 1, -1 ), model = "logit",
++   allCoefVcov = c( 0.03, 0.001, 0.05, 0.01, 
++     0.04, 0.05, 0.8 ) )
+> eff10b
+      effect        stdEr 
+-0.033590030  0.009466588 
+> 
+> # Example
+> eff11a <- urbinEffCat( allCoef = c( 0.28, 0.003, 0.0075, -0.034, 
++   -0.005, 0.89, 0.005, 0.06, 1.7 ),
++   allXVal = c( 1, 0.5, 0.3 ), xPos = c( 2:3 ), 
++   xGroups = c( -1, -1, 1 ), yCat = 2, model = "mlogit" )
+> eff11a
+    effect      stdEr 
+-0.0131091         NA 
+> 
+> eff11b <- urbinEffCat( allCoef = c( 0.28, 0.003, 0.0075, -0.034, 
++   -0.005, 0.89, 0.005, 0.06, 1.7 ),
++   allXVal = c( 1, 0.5, 0.3 ), xPos = c( 2:3 ), 
++   xGroups = c( -1, -1, 1 ), yCat = 2, model = "mlogit", 
++   allCoefVcov = c( 0.03, 0.0001, 0.005, 0.01, 0.004, 
++     0.05, 0.004, 0.5, 0.0078 ) )
+> eff11b
+     effect       stdEr 
+-0.01310910  0.02623909 
+> 
+> proc.time()
+   user  system elapsed 
+  0.105   0.008   0.107 
