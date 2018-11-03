@@ -16,8 +16,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 > library( "urbin" )
-Loading required package: miscTools
 > library( "maxLik" )
+Loading required package: miscTools
 
 Please cite the 'maxLik' package as:
 Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
@@ -37,6 +37,7 @@ The following objects are masked from 'package:base':
 
 Loading required package: MASS
 Loading required package: betareg
+> options( digits = 4 )
 > 
 > # load data set
 > data( "Mroz87", package = "sampleSelection" )
@@ -45,8 +46,8 @@ Loading required package: betareg
 > Mroz87$kids <- as.numeric( Mroz87$kids5 > 0 | Mroz87$kids618 > 0 )
 > 
 > ### linear in age
-> estLogitLin <- glm( lfp ~ kids + age + educ, 
-+   family = binomial(link = "logit"), 
+> estLogitLin <- glm( lfp ~ kids + age + educ,
++   family = binomial(link = "logit"),
 +   data = Mroz87 )
 > summary( estLogitLin )
 
@@ -55,15 +56,15 @@ glm(formula = lfp ~ kids + age + educ, family = binomial(link = "logit"),
     data = Mroz87)
 
 Deviance Residuals: 
-    Min       1Q   Median       3Q      Max  
--1.8731  -1.2325   0.8026   1.0564   1.5875  
+   Min      1Q  Median      3Q     Max  
+-1.873  -1.232   0.803   1.056   1.587  
 
 Coefficients:
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept) -0.11437    0.73459  -0.156  0.87628    
-kids        -0.50349    0.19932  -2.526  0.01154 *  
-age         -0.03108    0.01137  -2.734  0.00626 ** 
-educ         0.16902    0.03505   4.822 1.42e-06 ***
+(Intercept)  -0.1144     0.7346   -0.16   0.8763    
+kids         -0.5035     0.1993   -2.53   0.0115 *  
+age          -0.0311     0.0114   -2.73   0.0063 ** 
+educ          0.1690     0.0351    4.82  1.4e-06 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -71,7 +72,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Null deviance: 1029.75  on 752  degrees of freedom
 Residual deviance:  993.53  on 749  degrees of freedom
-AIC: 1001.5
+AIC: 1002
 
 Number of Fisher Scoring iterations: 4
 
@@ -79,68 +80,68 @@ Number of Fisher Scoring iterations: 4
 > xMeanLin <- c( 1, colMeans( Mroz87[ , c( "kids", "age", "educ" ) ] ) )
 > # semi-elasticity of age without standard errors
 > urbinEla( coef( estLogitLin ), xMeanLin, xPos = 3, model = "logit" )
-    semEla      stdEr 
--0.3236826         NA 
+ semEla   stdEr 
+-0.3237      NA 
 > # semi-elasticity of age based on numerical derivation
-> 100 * ( predict( estLogitLin, 
-+   newdata = as.data.frame( t( xMeanLin * c( 1, 1, 1.005, 1 ) ) ), 
+> 100 * ( predict( estLogitLin,
++   newdata = as.data.frame( t( xMeanLin * c( 1, 1, 1.005, 1 ) ) ),
 +   type = "response" ) -
-+     predict( estLogitLin, 
-+       newdata = as.data.frame( t( xMeanLin * c( 1, 1, 0.995, 1 ) ) ), 
++     predict( estLogitLin,
++       newdata = as.data.frame( t( xMeanLin * c( 1, 1, 0.995, 1 ) ) ),
 +       type = "response" ) )
-         1 
--0.3236815 
+      1 
+-0.3237 
 > # partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEla( coef( estLogitLin ), xMeanLin, 3, seSimplify = FALSE, 
+> urbinEla( coef( estLogitLin ), xMeanLin, 3, seSimplify = FALSE,
 +   model = "logit" )$derivCoef
-                   kids         age        educ 
- 0.04658311  0.03241640 12.39574832  0.57235977 
+             kids      age     educ 
+ 0.04658  0.03242 12.39575  0.57236 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
-+   t0 = coef( estLogitLin ), 
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estLogitLin ),
 +   allXVal = xMeanLin, xPos = 3, model = "logit" )
-     (Intercept)      kids      age      educ
-[1,]  0.04658311 0.0324164 12.39575 0.5723598
+     (Intercept)    kids  age   educ
+[1,]     0.04658 0.03242 12.4 0.5724
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit", 
+> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit",
 +   seSimplify = TRUE )$derivCoef
-[1]  0.0000  0.0000 10.4142  0.0000
+[1]  0.00  0.00 10.41  0.00
 > # semi-elasticity of age with standard errors (full covariance matrix)
-> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit", 
+> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit",
 +   vcov( estLogitLin ) )
-    semEla      stdEr 
--0.3236826  0.1183349 
+ semEla   stdEr 
+-0.3237  0.1183 
 > # semi-elasticity of age with standard errors (only standard errors)
 > urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit",
 +   sqrt( diag( vcov( estLogitLin ) ) ), seSimplify = FALSE )
-    semEla      stdEr 
--0.3236826  0.1465392 
+ semEla   stdEr 
+-0.3237  0.1465 
 Warning message:
 In urbinEla(coef(estLogitLin), xMeanLin, 3, model = "logit", sqrt(diag(vcov(estLogitLin))),  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
 > # semi-elasticity of age with standard errors (only standard errors, simplified)
-> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit", 
+> urbinEla( coef( estLogitLin ), xMeanLin, 3, model = "logit",
 +   sqrt( diag( vcov( estLogitLin ) ) ) )
-    semEla      stdEr 
--0.3236826  0.1183930 
+ semEla   stdEr 
+-0.3237  0.1184 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
 > estLogitLinMfx <- logitmfx( lfp ~ kids + age + educ, data = Mroz87 )
 > estLogitLinMfx$mfxest[ "age", 1:2 ] * xMeanLin[ "age" ]
-     dF/dx  Std. Err. 
--0.3236826  0.1183349 
-> urbinEla( estLogitLinMfx$mfxest[ "age", 1 ], xMeanLin["age"], 1, iPos = 0, 
+    dF/dx Std. Err. 
+  -0.3237    0.1183 
+> urbinEla( estLogitLinMfx$mfxest[ "age", 1 ], xMeanLin["age"], 1, iPos = 0,
 +   model = "lpm", estLogitLinMfx$mfxest[ "age", 2 ] )
-    semEla      stdEr 
--0.3236826  0.1183349 
-> urbinEla( estLogitLinMfx$mfxest[ , 1 ], xMeanLin[-1], 2, iPos = 0, 
+ semEla   stdEr 
+-0.3237  0.1183 
+> urbinEla( estLogitLinMfx$mfxest[ , 1 ], xMeanLin[-1], 2, iPos = 0,
 +   model = "lpm", estLogitLinMfx$mfxest[ , 2 ] )
-    semEla      stdEr 
--0.3236826  0.1183349 
+ semEla   stdEr 
+-0.3237  0.1183 
 > 
 > 
 > ### quadratic in age
-> estLogitQuad <- glm( lfp ~ kids + age + I(age^2) + educ, 
-+   family = binomial(link = "logit"), 
+> estLogitQuad <- glm( lfp ~ kids + age + I(age^2) + educ,
++   family = binomial(link = "logit"),
 +   data = Mroz87 )
 > summary( estLogitQuad )
 
@@ -150,15 +151,15 @@ glm(formula = lfp ~ kids + age + I(age^2) + educ, family = binomial(link = "logi
 
 Deviance Residuals: 
    Min      1Q  Median      3Q     Max  
--1.899  -1.232   0.789   1.051   1.650  
+-1.899  -1.232   0.789   1.051   1.649  
 
 Coefficients:
-             Estimate Std. Error z value Pr(>|z|)    
-(Intercept) -6.943656   2.274121  -3.053 0.002263 ** 
-kids        -0.702707   0.213342  -3.294 0.000988 ***
-age          0.308023   0.107374   2.869 0.004122 ** 
-I(age^2)    -0.003998   0.001262  -3.168 0.001534 ** 
-educ         0.172295   0.035446   4.861 1.17e-06 ***
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept) -6.94366    2.27412   -3.05  0.00226 ** 
+kids        -0.70271    0.21334   -3.29  0.00099 ***
+age          0.30802    0.10737    2.87  0.00412 ** 
+I(age^2)    -0.00400    0.00126   -3.17  0.00153 ** 
+educ         0.17229    0.03545    4.86  1.2e-06 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -166,7 +167,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Null deviance: 1029.75  on 752  degrees of freedom
 Residual deviance:  983.26  on 748  degrees of freedom
-AIC: 993.26
+AIC: 993.3
 
 Number of Fisher Scoring iterations: 4
 
@@ -174,42 +175,42 @@ Number of Fisher Scoring iterations: 4
 > xMeanQuad <- c( xMeanLin[ 1:3 ], xMeanLin[3]^2, xMeanLin[4] )
 > # semi-elasticity of age without standard errors
 > urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit" )
-    semEla      stdEr 
--0.3171501         NA 
+ semEla   stdEr 
+-0.3172      NA 
 > # semi-elasticity of age based on numerical derivation
-> 100 * ( predict( estLogitQuad, 
-+   newdata = as.data.frame( t( xMeanQuad * c( 1, 1, 1.005, 1.005^2, 1 ) ) ), 
+> 100 * ( predict( estLogitQuad,
++   newdata = as.data.frame( t( xMeanQuad * c( 1, 1, 1.005, 1.005^2, 1 ) ) ),
 +   type = "response" ) -
-+     predict( estLogitQuad, 
-+       newdata = as.data.frame( t( xMeanQuad * c( 1, 1, 0.995, 0.995^2, 1 ) ) ), 
++     predict( estLogitQuad,
++       newdata = as.data.frame( t( xMeanQuad * c( 1, 1, 0.995, 0.995^2, 1 ) ) ),
 +       type = "response" ) )
-         1 
--0.3171646 
+      1 
+-0.3172 
 > # partial derivatives of the semi-elasticity wrt the coefficients
 > urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   seSimplify = FALSE )$derivCoef
-                     kids          age          age         educ 
-  0.08534662   0.05939127  13.49480379 993.64781746   1.04864132 
+               kids       age       age      educ 
+  0.08535   0.05939  13.49480 993.64782   1.04864 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
-+   t0 = coef( estLogitQuad ), 
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estLogitQuad ),
 +   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "logit" )
-     (Intercept)       kids     age I(age^2)     educ
-[1,]  0.08534662 0.05939127 13.4948 993.6476 1.048641
+     (Intercept)    kids   age I(age^2)  educ
+[1,]     0.08535 0.05939 13.49    993.6 1.049
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
 > urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   seSimplify = TRUE )$derivCoef
-[1]   0.000000   0.000000   9.864342 839.215794   0.000000
+[1]   0.000   0.000   9.864 839.216   0.000
 > # semi-elasticity of age with standard errors (full covariance matrix)
-> urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit", 
+> urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   vcov( estLogitQuad ) )
-    semEla      stdEr 
--0.3171501  0.1125322 
+ semEla   stdEr 
+-0.3172  0.1125 
 > # semi-elasticity of age with standard errors (only standard errors)
-> urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit", 
+> urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   sqrt( diag( vcov( estLogitQuad ) ) ), seSimplify = FALSE )
-    semEla      stdEr 
--0.3171501  1.9264975 
+ semEla   stdEr 
+-0.3172  1.9265 
 Warning messages:
 1: In urbinEla(coef(estLogitQuad), xMeanQuad, c(3, 4), model = "logit",  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
@@ -218,8 +219,8 @@ Warning messages:
 > # semi-elasticity of age with standard errors (only standard errors, simplified)
 > urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   sqrt( diag( vcov( estLogitQuad ) ) ) )
-    semEla      stdEr 
--0.3171501  1.4978695 
+ semEla   stdEr 
+-0.3172  1.4979 
 Warning message:
 In urbinEla(allCoef = coef(estLogitQuad), allXVal = xMeanQuad, xPos = c(3, 4), model = "logit", allCoefVcov = sqrt(diag(vcov(estLogitQuad)))) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
@@ -228,8 +229,8 @@ In urbinEla(allCoef = coef(estLogitQuad), allXVal = xMeanQuad, xPos = c(3, 4), m
 +   sqrt( diag( vcov( estLogitQuad ) ) ),
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
 +   seSimplify = FALSE )
-     semEla       stdEr 
--0.31715014  0.09912969 
+  semEla    stdEr 
+-0.31715  0.09913 
 Warning message:
 In urbinEla(coef(estLogitQuad), xMeanQuad, c(3, 4), model = "logit",  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
@@ -237,43 +238,43 @@ In urbinEla(coef(estLogitQuad), xMeanQuad, c(3, 4), model = "logit",  :
 > urbinEla( coef( estLogitQuad ), xMeanQuad, c( 3, 4 ), model = "logit",
 +   sqrt( diag( vcov( estLogitQuad ) ) ),
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-    semEla      stdEr 
--0.3171501  0.1359782 
+ semEla   stdEr 
+-0.3172  0.1360 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
 > # (differs from the above, because mean(age)^2 is not the same as mean(age^2))
 > estLogitQuadMfx <- logitmfx( lfp ~ kids + age + I(age^2) + educ, data = Mroz87 )
 > estLogitQuadMfx$mfxest[ "age", 1:2 ] * xMeanQuad[ "age" ] +
 +   2 * estLogitQuadMfx$mfxest[ "I(age^2)", 1:2 ] * xMeanQuad[ "age" ]^2
-     dF/dx  Std. Err. 
--0.3347451  2.2359259 
-> urbinEla( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], 
-+   xMeanQuad["age"], 1:2, iPos = 0, 
+    dF/dx Std. Err. 
+  -0.3347    2.2359 
+> urbinEla( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
++   xMeanQuad["age"], 1:2, iPos = 0,
 +   model = "lpm", estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] )
-    semEla      stdEr 
--0.3347451  1.5810384 
+ semEla   stdEr 
+-0.3347  1.5810 
 Warning message:
 In urbinEla(allCoef = estLogitQuadMfx$mfxest[c("age", "I(age^2)"), 1], allXVal = xMeanQuad["age"], xPos = 1:2, model = "lpm", allCoefVcov = estLogitQuadMfx$mfxest[c("age", "I(age^2)"), 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( estLogitQuadMfx$mfxest[  , 1 ], 
-+   xMeanQuad[-1], 2:3, iPos = 0, 
+> urbinEla( estLogitQuadMfx$mfxest[  , 1 ],
++   xMeanQuad[-1], 2:3, iPos = 0,
 +   model = "lpm", estLogitQuadMfx$mfxest[ , 2 ] )
-    semEla      stdEr 
--0.3347451  1.5810384 
+ semEla   stdEr 
+-0.3347  1.5810 
 Warning message:
 In urbinEla(allCoef = estLogitQuadMfx$mfxest[, 1], allXVal = xMeanQuad[-1], xPos = 2:3, model = "lpm", allCoefVcov = estLogitQuadMfx$mfxest[, 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], 
-+   xMeanQuad["age"], 1:2, iPos = 0, 
+> urbinEla( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
++   xMeanQuad["age"], 1:2, iPos = 0,
 +   model = "lpm", estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-    semEla      stdEr 
--0.3347451  0.1435284 
-> urbinEla( estLogitQuadMfx$mfxest[  , 1 ], 
-+   xMeanQuad[-1], 2:3, iPos = 0, 
+ semEla   stdEr 
+-0.3347  0.1435 
+> urbinEla( estLogitQuadMfx$mfxest[  , 1 ],
++   xMeanQuad[-1], 2:3, iPos = 0,
 +   model = "lpm", estLogitQuadMfx$mfxest[ , 2 ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-    semEla      stdEr 
--0.3347451  0.1435284 
+ semEla   stdEr 
+-0.3347  0.1435 
 > 
 > 
 > ### age is interval-coded (age is in the range 30-60)
@@ -282,13 +283,13 @@ In urbinEla(allCoef = estLogitQuadMfx$mfxest[, 1], allXVal = xMeanQuad[-1], xPos
 > Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
 > Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
 > Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
-> all.equal( 
+> all.equal(
 +   Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
 +   rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
 > # estimation
-> estLogitInt <- glm( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ, 
-+   family = binomial(link = "logit"), 
+> estLogitInt <- glm( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
++   family = binomial(link = "logit"),
 +   data = Mroz87 )
 > summary( estLogitInt )
 
@@ -297,17 +298,17 @@ glm(formula = lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
     family = binomial(link = "logit"), data = Mroz87)
 
 Deviance Residuals: 
-    Min       1Q   Median       3Q      Max  
--1.8739  -1.2158   0.8047   1.0675   1.7220  
+   Min      1Q  Median      3Q     Max  
+-1.874  -1.216   0.805   1.067   1.722  
 
 Coefficients:
              Estimate Std. Error z value Pr(>|z|)    
-(Intercept)  -1.44414    0.45478  -3.175  0.00150 ** 
-kids         -0.60454    0.20798  -2.907  0.00365 ** 
-age30.37TRUE  0.22077    0.20602   1.072  0.28391    
-age38.44TRUE  0.19729    0.22027   0.896  0.37042    
-age53.60TRUE -0.82706    0.26535  -3.117  0.00183 ** 
-educ          0.17434    0.03537   4.930 8.24e-07 ***
+(Intercept)   -1.4441     0.4548   -3.18   0.0015 ** 
+kids          -0.6045     0.2080   -2.91   0.0037 ** 
+age30.37TRUE   0.2208     0.2060    1.07   0.2839    
+age38.44TRUE   0.1973     0.2203    0.90   0.3704    
+age53.60TRUE  -0.8271     0.2653   -3.12   0.0018 ** 
+educ           0.1743     0.0354    4.93  8.2e-07 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -315,27 +316,27 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Null deviance: 1029.75  on 752  degrees of freedom
 Residual deviance:  987.04  on 747  degrees of freedom
-AIC: 999.04
+AIC: 999
 
 Number of Fisher Scoring iterations: 4
 
 > # mean values of the explanatory variables
-> xMeanInt <- c( xMeanLin[1:2], mean( Mroz87$age30.37 ), 
+> xMeanInt <- c( xMeanLin[1:2], mean( Mroz87$age30.37 ),
 +   mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMeanLin[4] )
 > # semi-elasticity of age without standard errors
 > urbinElaInt( coef( estLogitInt ), xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit" )
-    semEla      stdEr 
--0.3777235         NA 
+ semEla   stdEr 
+-0.3777      NA 
 > # semi-elasticities based on numerical derivation
 > Mroz87Lower <- Mroz87
 > Mroz87Lower$age <- Mroz87$age * 0.95
 > Mroz87Lower$age30.37 <- Mroz87Lower$age <= 37.5
 > Mroz87Lower$age38.44 <- Mroz87Lower$age > 37.5 & Mroz87Lower$age <= 44.5
 > Mroz87Lower$age45.52 <- Mroz87Lower$age > 44.5 & Mroz87Lower$age <= 52.5
-> Mroz87Lower$age53.60 <- Mroz87Lower$age > 52.5 
-> all.equal( 
-+   Mroz87Lower$age30.37 + Mroz87Lower$age38.44 + Mroz87Lower$age45.52 + 
+> Mroz87Lower$age53.60 <- Mroz87Lower$age > 52.5
+> all.equal(
++   Mroz87Lower$age30.37 + Mroz87Lower$age38.44 + Mroz87Lower$age45.52 +
 +     Mroz87Lower$age53.60, rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
 > Mroz87Upper <- Mroz87
@@ -343,205 +344,202 @@ Number of Fisher Scoring iterations: 4
 > Mroz87Upper$age30.37 <- Mroz87Upper$age <= 37.5
 > Mroz87Upper$age38.44 <- Mroz87Upper$age > 37.5 & Mroz87Upper$age <= 44.5
 > Mroz87Upper$age45.52 <- Mroz87Upper$age > 44.5 & Mroz87Upper$age <= 52.5
-> Mroz87Upper$age53.60 <- Mroz87Upper$age > 52.5 
-> all.equal( 
-+   Mroz87Upper$age30.37 + Mroz87Upper$age38.44 + Mroz87Upper$age45.52 + 
+> Mroz87Upper$age53.60 <- Mroz87Upper$age > 52.5
+> all.equal(
++   Mroz87Upper$age30.37 + Mroz87Upper$age38.44 + Mroz87Upper$age45.52 +
 +     Mroz87Upper$age53.60, rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
 > 10 * mean( predict( estLogitInt, newdata = Mroz87Upper, type = "response" ) -
 +   predict( estLogitInt, newdata = Mroz87Lower, type = "response" ) )
-[1] -0.3509701
+[1] -0.351
 > Mroz87LowerMean <- Mroz87Lower
 > Mroz87UpperMean <- Mroz87Upper
 > Mroz87LowerMean$kids <- Mroz87UpperMean$kids <- xMeanInt[ "kids" ]
 > Mroz87LowerMean$educ <- Mroz87UpperMean$educ <- xMeanInt[ "educ" ]
 > 10 * mean( predict( estLogitInt, newdata = Mroz87UpperMean, type = "response" ) -
 +     predict( estLogitInt, newdata = Mroz87LowerMean, type = "response" ) )
-[1] -0.3688123
+[1] -0.3688
 > # partial derivatives of the semi-elasticity wrt the coefficients
 > urbinElaInt( coef( estLogitInt ), xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit" )$derivCoef
-[1] -0.003229275 -0.002247198 -0.343125931 -0.030584540  0.336142758
-[6] -0.039677622
+[1] -0.003229 -0.002247 -0.343126 -0.030585  0.336143 -0.039678
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
 +   t0 = coef( estLogitInt ), allXVal = xMeanInt,
 +   xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
 +   model = "logit" )
-      (Intercept)         kids age30.37TRUE age38.44TRUE age53.60TRUE
-[1,] -0.003229275 -0.002247198   -0.3431259  -0.03058454    0.3361428
-            educ
-[1,] -0.03967762
+     (Intercept)      kids age30.37TRUE age38.44TRUE age53.60TRUE     educ
+[1,]   -0.003229 -0.002247      -0.3431     -0.03058       0.3361 -0.03968
 > # semi-elasticity of age with standard errors (full covariance matrix)
 > urbinElaInt( coef( estLogitInt ), xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit",
 +   allCoefVcov = vcov( estLogitInt ) )
-    semEla      stdEr 
--0.3777235  0.1017187 
+ semEla   stdEr 
+-0.3777  0.1017 
 > # semi-elasticity of age with standard errors (only standard errors)
 > urbinElaInt( coef( estLogitInt ), xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit",
 +   allCoefVcov = sqrt( diag( vcov( estLogitInt ) ) ) )
-    semEla      stdEr 
--0.3777235  0.1140289 
+ semEla   stdEr 
+-0.3777  0.1140 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
-> estLogitIntMfx <- logitmfx( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ, 
+> estLogitIntMfx <- logitmfx( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +   data = Mroz87 )
-> urbinElaInt( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], 
-+   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+> urbinElaInt( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ],
++   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   estLogitIntMfx$mfxest[ 2:4, 2 ] )
-    semEla      stdEr 
--0.3798801  0.1172656 
-> urbinElaInt( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], 
-+   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+ semEla   stdEr 
+-0.3799  0.1173 
+> urbinElaInt( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ],
++   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   estLogitIntMfx$mfxest[ , 2 ] )
-    semEla      stdEr 
--0.3798801  0.1172656 
+ semEla   stdEr 
+-0.3799  0.1173 
 > 
 > 
-> ### effect of age changing between discrete intervals 
-> ### if age is used as linear explanatory variable 
+> ### effect of age changing between discrete intervals
+> ### if age is used as linear explanatory variable
 > # mean values of the 'other' explanatory variables
 > xMeanLinInt <- c( xMeanLin[ 1:2 ], NA, xMeanLin[4] )
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # without standard errors
 > urbinEffInt( coef( estLogitLin ), allXVal = xMeanLinInt, xPos = 3,
 +   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "logit" )
-    effect      stdEr 
--0.1524657         NA 
+ effect   stdEr 
+-0.1525      NA 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # based on predicted values
-> predict( estLogitLin, 
-+   newdata = as.data.frame( t( replace( xMeanLin, 3, 55 ) ) ), 
+> predict( estLogitLin,
++   newdata = as.data.frame( t( replace( xMeanLin, 3, 55 ) ) ),
 +   type = "response" ) -
-+   predict( estLogitLin, 
-+     newdata = as.data.frame( t( replace( xMeanLin, 3, 35 ) ) ), 
++   predict( estLogitLin,
++     newdata = as.data.frame( t( replace( xMeanLin, 3, 35 ) ) ),
 +     type = "response" )
-         1 
--0.1524657 
+      1 
+-0.1525 
 > # partial derivatives of the semi-elasticity wrt the coefficients
 > urbinEffInt( coef( estLogitLin ), xMeanLinInt, 3,
 +   c( 30, 40 ), c( 50, 60 ), model = "logit" )$derivCoef
-[1] 0.01581969 0.01100865 5.54182737 0.19437417
+[1] 0.01582 0.01101 5.54183 0.19437
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
 +   t0 = coef( estLogitLin ),
 +   allXVal = xMeanLinInt, xPos = 3,
 +   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "logit" )
-     (Intercept)       kids      age      educ
-[1,]  0.01581969 0.01100865 5.541827 0.1943742
+     (Intercept)    kids   age   educ
+[1,]     0.01582 0.01101 5.542 0.1944
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (full covariance matrix) 
+> # (full covariance matrix)
 > urbinEffInt( coef( estLogitLin ), xMeanLinInt, 3,
 +   c( 30, 40 ), c( 50, 60 ), model = "logit", allCoefVcov = vcov( estLogitLin ) )
-    effect      stdEr 
--0.1524657  0.0553270 
+  effect    stdEr 
+-0.15247  0.05533 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (only standard errors) 
+> # (only standard errors)
 > urbinEffInt( coef( estLogitLin ), allXVal = xMeanLinInt, xPos = 3,
-+   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "logit", 
++   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "logit",
 +   allCoefVcov = sqrt( diag( vcov( estLogitLin ) ) ) )
-     effect       stdEr 
--0.15246566  0.06446329 
+  effect    stdEr 
+-0.15247  0.06446 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffInt( estLogitLinMfx$mfxest[ "age", 1 ], NULL, 1, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estLogitLinMfx$mfxest[ "age", 1 ], NULL, 1, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitLinMfx$mfxest[ "age", 2 ] )
-     effect       stdEr 
--0.15218571  0.05563745 
-> urbinEffInt( estLogitLinMfx$mfxest[ , 1 ], NULL, 2, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+  effect    stdEr 
+-0.15219  0.05564 
+> urbinEffInt( estLogitLinMfx$mfxest[ , 1 ], NULL, 2, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitLinMfx$mfxest[ , 2 ] )
-     effect       stdEr 
--0.15218571  0.05563745 
+  effect    stdEr 
+-0.15219  0.05564 
 > 
 > 
-> ### effect of age changing between discrete intervals 
-> ### if age is used as linear and quadratic explanatory variable 
+> ### effect of age changing between discrete intervals
+> ### if age is used as linear and quadratic explanatory variable
 > # mean values of the 'other' explanatory variables
 > xMeanQuadInt <- c( xMeanLin[ 1:2 ], NA, NA, xMeanLin[4] )
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # without standard errors
-> urbinEffInt( coef( estLogitQuad ), allXVal = xMeanQuadInt, 
-+   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
+> urbinEffInt( coef( estLogitQuad ), allXVal = xMeanQuadInt,
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ),
 +   model = "logit" )
-    effect      stdEr 
--0.2535377         NA 
+ effect   stdEr 
+-0.2535      NA 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # based on predicted values
-> predict( estLogitQuad, 
-+   newdata = as.data.frame( t( replace( xMeanQuad, 3:4, c( 55, 55^2 ) ) ) ), 
+> predict( estLogitQuad,
++   newdata = as.data.frame( t( replace( xMeanQuad, 3:4, c( 55, 55^2 ) ) ) ),
 +   type = "response" ) -
-+   predict( estLogitQuad, 
-+     newdata = as.data.frame( t( replace( xMeanQuad, 3:4, c( 35, 35^2 ) ) ) ), 
++   predict( estLogitQuad,
++     newdata = as.data.frame( t( replace( xMeanQuad, 3:4, c( 35, 35^2 ) ) ) ),
 +     type = "response" )
-         1 
--0.2534117 
+      1 
+-0.2534 
 > # partial derivatives of the effect wrt the coefficients
 > urbinEffInt( coef( estLogitQuad ), xMeanQuadInt, c( 3, 4 ),
 +   c( 30, 40 ), c( 50, 60 ), model = "logit" )$derivCoef
-[1] 1.806166e-03 1.256881e-03 4.759617e+00 4.249037e+02 2.219210e-02
+[1] 1.806e-03 1.257e-03 4.760e+00 4.249e+02 2.219e-02
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
 +   t0 = coef( estLogitQuad ),
 +   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
 +   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "logit" )
-     (Intercept)        kids      age I(age^2)      educ
-[1,] 0.001806166 0.001256881 4.759617 424.9036 0.0221921
+     (Intercept)     kids  age I(age^2)    educ
+[1,]    0.001806 0.001257 4.76    424.9 0.02219
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (full covariance matrix) 
+> # (full covariance matrix)
 > urbinEffInt( coef( estLogitQuad ), xMeanQuadInt, c( 3, 4 ),
-+   c( 30, 40 ), c( 50, 60 ), model = "logit", 
++   c( 30, 40 ), c( 50, 60 ), model = "logit",
 +   allCoefVcov = vcov( estLogitQuad ) )
-     effect       stdEr 
--0.25353772  0.06224043 
+  effect    stdEr 
+-0.25354  0.06224 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (only standard errors) 
-> urbinEffInt( coef( estLogitQuad ), allXVal = xMeanQuadInt, 
-+   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ), 
+> # (only standard errors)
+> urbinEffInt( coef( estLogitQuad ), allXVal = xMeanQuadInt,
++   xPos = c( 3, 4 ), refBound = c( 30, 40 ), intBound = c( 50, 60 ),
 +   model = "logit", allCoefVcov = sqrt( diag( vcov( estLogitQuad ) ) ) )
-    effect      stdEr 
--0.2535377  0.7407856 
+ effect   stdEr 
+-0.2535  0.7408 
 Warning message:
 In urbinEffInt(allCoef = coef(estLogitQuad), allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "logit", allCoefVcov = sqrt(diag(vcov(estLogitQuad)))) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # (standard errors + mean value and standard deviation of age)
 > urbinEffInt( coef( estLogitQuad ), xMeanQuadInt, c( 3, 4 ),
-+   c( 30, 40 ), c( 50, 60 ), model = "logit", 
++   c( 30, 40 ), c( 50, 60 ), model = "logit",
 +   allCoefVcov = sqrt( diag( vcov( estLogitQuad ) ) ),
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-     effect       stdEr 
--0.25353772  0.07205095 
+  effect    stdEr 
+-0.25354  0.07205 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffInt( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2, 
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
++   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] )
-    effect      stdEr 
--0.2537726  0.7651708 
+ effect   stdEr 
+-0.2538  0.7652 
 Warning message:
 In urbinEffInt(allCoef = estLogitQuadMfx$mfxest[c("age", "I(age^2)"), 1], allXVal = NULL, xPos = 1:2, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = estLogitQuadMfx$mfxest[c("age", "I(age^2)"), 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estLogitQuadMfx$mfxest[ , 1 ], NULL, 2:3, 
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estLogitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
++   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitQuadMfx$mfxest[ , 2 ] )
-    effect      stdEr 
--0.2537726  0.7651708 
+ effect   stdEr 
+-0.2538  0.7652 
 Warning message:
 In urbinEffInt(allCoef = estLogitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:3, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = estLogitQuadMfx$mfxest[, 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2, 
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
++   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-     effect       stdEr 
--0.25377263  0.07577325 
-> urbinEffInt( estLogitQuadMfx$mfxest[ , 1 ], NULL, 2:3, 
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+  effect    stdEr 
+-0.25377  0.07577 
+> urbinEffInt( estLogitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
++   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estLogitQuadMfx$mfxest[ , 2 ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
-     effect       stdEr 
--0.25377263  0.07577325 
+  effect    stdEr 
+-0.25377  0.07577 
 > 
 > 
 > ### grouping and re-basing categorical variables
@@ -549,11 +547,11 @@ In urbinEffInt(allCoef = estLogitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:3
 > # without standard errors
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   model = "logit" )
-    effect      stdEr 
--0.2538074         NA 
+ effect   stdEr 
+-0.2538      NA 
 > # effects calculated based on predicted values
 > names( xMeanInt ) <- sub( "TRUE", "", names( coef( estLogitInt ) ) )
-> df30.37 <- df38.44 <- df45.52 <- df53.60 <- as.data.frame( t( xMeanInt ) ) 
+> df30.37 <- df38.44 <- df45.52 <- df53.60 <- as.data.frame( t( xMeanInt ) )
 > df30.37[ , 3:5 ] <- c( TRUE, FALSE, FALSE )
 > df38.44[ , 3:5 ] <- c( FALSE, TRUE, FALSE )
 > df45.52[ , 3:5 ] <- c( FALSE, FALSE, FALSE )
@@ -563,89 +561,85 @@ In urbinEffInt(allCoef = estLogitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:3
 +   predict( estLogitInt, newdata = df30.37, type = "response" ) -
 +   sum( Mroz87$age38.44 ) / sum( Mroz87$age30.37 + Mroz87$age38.44 ) *
 +   predict( estLogitInt, newdata = df38.44, type = "response" )
-         1 
--0.2538037 
+      1 
+-0.2538 
 > # partial derivatives of the effect wrt the coefficients
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ),
 +   c( -1, -1, 1, 0 ), model = "logit" )$derivCoef
-[1] -0.003641672 -0.002534178 -0.138528966 -0.097135849  0.232023143
-[6] -0.044744687
+[1] -0.003642 -0.002534 -0.138529 -0.097136  0.232023 -0.044745
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
 +   t0 = coef( estLogitInt ),
 +   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
 +   model = "logit" )
-      (Intercept)         kids age30.37TRUE age38.44TRUE age53.60TRUE
-[1,] -0.003641672 -0.002534178    -0.138529  -0.09713585    0.2320231
-            educ
-[1,] -0.04474469
+     (Intercept)      kids age30.37TRUE age38.44TRUE age53.60TRUE     educ
+[1,]   -0.003642 -0.002534      -0.1385     -0.09714        0.232 -0.04474
 > # with full covariance matrix
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   allCoefVcov = vcov( estLogitInt ), model = "logit" )
-     effect       stdEr 
--0.25380744  0.06582802 
+  effect    stdEr 
+-0.25381  0.06583 
 > # with standard errors only
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   allCoefVcov = sqrt( diag( vcov( estLogitInt ) ) ), model = "logit" )
-     effect       stdEr 
--0.25380744  0.07119196 
+  effect    stdEr 
+-0.25381  0.07119 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffCat( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3), 
+> urbinEffCat( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3),
 +   c( -1, -1, 1, 0 ), iPos = 0, model = "lpm", estLogitIntMfx$mfxest[ 2:4, 2 ] )
-     effect       stdEr 
--0.25514364  0.07315018 
-> urbinEffCat( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4), 
+  effect    stdEr 
+-0.25514  0.07315 
+> urbinEffCat( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4),
 +   c( -1, -1, 1, 0 ), iPos = 0, model = "lpm", estLogitIntMfx$mfxest[ , 2 ] )
-     effect       stdEr 
--0.25514364  0.07315018 
+  effect    stdEr 
+-0.25514  0.07315 
 > 
 > ### effects of age changing from the 53-60 category to the 38-52 category
 > # without standard errors
-> urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ), 
+> urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   model = "logit" )
-   effect     stdEr 
-0.2238558        NA 
+effect  stdEr 
+0.2239     NA 
 > # effects calculated based on predicted values
 > sum( Mroz87$age38.44 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
 +   predict( estLogitInt, newdata = df38.44, type = "response" ) +
 +   sum( Mroz87$age45.52 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
 +   predict( estLogitInt, newdata = df45.52, type = "response" ) -
 +   predict( estLogitInt, newdata = df53.60, type = "response" )
-        1 
-0.2236439 
+     1 
+0.2236 
 > # partial derivatives of the effect wrt the coefficients
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ),
 +   c( 0, 1, -1, 1 ), model = "logit" )$derivCoef
-[1]  0.009916771  0.006900914  0.000000000  0.105139321 -0.232023143
-[6]  0.121845902
+[1]  0.009917  0.006901  0.000000  0.105139 -0.232023  0.121846
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
 +   t0 = coef( estLogitInt ),
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
 +   model = "logit" )
-     (Intercept)        kids age30.37TRUE age38.44TRUE age53.60TRUE      educ
-[1,] 0.009916771 0.006900914            0    0.1051393   -0.2320231 0.1218459
+     (Intercept)     kids age30.37TRUE age38.44TRUE age53.60TRUE   educ
+[1,]    0.009917 0.006901            0       0.1051       -0.232 0.1218
 > # with full covariance matrix
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   allCoefVcov = vcov( estLogitInt ), model = "logit" )
-    effect      stdEr 
-0.22385578 0.06109041 
+ effect   stdEr 
+0.22386 0.06109 
 > # with standard errors only
 > urbinEffCat( coef( estLogitInt ), xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   allCoefVcov = sqrt( diag( vcov( estLogitInt ) ) ), model = "logit" )
-    effect      stdEr 
-0.22385578 0.06608907 
+ effect   stdEr 
+0.22386 0.06609 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffCat( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3), 
+> urbinEffCat( estLogitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3),
 +   c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estLogitIntMfx$mfxest[ 2:4, 2 ] )
-    effect      stdEr 
-0.22465561 0.06745489 
-> urbinEffCat( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4), 
+ effect   stdEr 
+0.22466 0.06745 
+> urbinEffCat( estLogitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4),
 +   c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estLogitIntMfx$mfxest[ , 2 ] )
-    effect      stdEr 
-0.22465561 0.06745489 
+ effect   stdEr 
+0.22466 0.06745 
 > 
 > 
 > proc.time()
    user  system elapsed 
-  0.560   0.035   0.590 
+  0.641   0.020   0.653 

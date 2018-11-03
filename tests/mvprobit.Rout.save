@@ -27,7 +27,7 @@ https://r-forge.r-project.org/projects/maxlik/
 > library( "mvProbit" )
 Loading required package: mvtnorm
 Loading required package: abind
-> options( digits = 3 )
+> options( digits = 2 )
 > 
 > # load data set
 > data( "Mroz87", package = "sampleSelection" )
@@ -39,9 +39,9 @@ Loading required package: abind
 > Mroz87$kids <- as.numeric( Mroz87$kids5 > 0 | Mroz87$kids618 > 0 )
 > 
 > ### linear in age
-> estMvProbitLin <- mvProbit( cbind( lfp, husMoonlight ) ~ kids + age + educ, 
-+   data = Mroz87, nGHK = 300, iterlim = 0,
-+   start = c( -0.07332, -0.31572, -0.01915, 0.10475, 
+> estMvProbitLin <- mvProbit( cbind( lfp, husMoonlight ) ~ kids + age + educ,
++   data = Mroz87, nGHK = 300, iterlim = 0, oneSidedGrad = TRUE, eps = 1e-4,
++   start = c( -0.07332, -0.31572, -0.01915, 0.10475,
 +     -0.70550, 0.09776, -0.00889, 0.03258, -0.10837 ) )
 > summary( estMvProbitLin )
 
@@ -49,7 +49,7 @@ Call:
 mvProbit(formula = cbind(lfp, husMoonlight) ~ kids + age + educ, 
     data = Mroz87, start = c(-0.07332, -0.31572, -0.01915, 0.10475, 
         -0.7055, 0.09776, -0.00889, 0.03258, -0.10837), nGHK = 300, 
-    iterlim = 0)
+    oneSidedGrad = TRUE, eps = 1e-04, iterlim = 0)
 
 Coefficients:
        Estimate Std. error t value  Pr(> t)    
@@ -57,11 +57,11 @@ b_1_0 -0.073320   0.462114  -0.159  0.87394
 b_1_1 -0.315720   0.127760  -2.471  0.01347 *  
 b_1_2 -0.019150   0.007084  -2.703  0.00686 ** 
 b_1_3  0.104750   0.021673   4.833 1.34e-06 ***
-b_2_0 -0.705500   0.492099  -1.434  0.15167    
+b_2_0 -0.705500   0.492101  -1.434  0.15167    
 b_2_1  0.097760   0.137391   0.712  0.47675    
 b_2_2 -0.008890   0.007636  -1.164  0.24434    
-b_2_3  0.032580   0.022245   1.465  0.14304    
-R_1_2 -0.108370   0.062641  -1.730  0.08363 .  
+b_2_3  0.032580   0.022246   1.465  0.14304    
+R_1_2 -0.108370   0.062642  -1.730  0.08363 .  
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -85,62 +85,62 @@ semEla  stdEr
 +     mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + educ,
 +       coef = coef( estMvProbitLin ), data = Mroz87Lower ) )
     lfp husMoonlight
-1 -0.32       -0.125
+1 -0.32        -0.12
 > # partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit", 
+> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
 +   seSimplify = FALSE )$derivCoef
-           kids     age    educ 
- 0.0574  0.0399 19.1399  0.7050 
+         kids    age   educ 
+ 0.057  0.040 19.140  0.705 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
-+   t0 = coef( estMvProbitLin )[1:4], 
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estMvProbitLin )[1:4],
 +   allXVal = xMeanLin, xPos = 3, model = "probit" )
-      b_1_0  b_1_1 b_1_2 b_1_3
-[1,] 0.0574 0.0399  19.1 0.705
+     b_1_0 b_1_1 b_1_2 b_1_3
+[1,] 0.057  0.04    19   0.7
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit", 
+> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
 +   seSimplify = TRUE )$derivCoef
-[1]  0.0  0.0 16.7  0.0
+[1]  0  0 17  0
 > # semi-elasticity of age with standard errors (full covariance matrix)
-> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit", 
+> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
 +   vcov( estMvProbitLin )[1:4,1:4] )
 semEla  stdEr 
--0.320  0.118 
+ -0.32   0.12 
 > # semi-elasticity of age with standard errors (only standard errors)
 > urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
 +   sqrt( diag( vcov( estMvProbitLin ) ) )[1:4], seSimplify = FALSE )
 semEla  stdEr 
--0.320  0.139 
+ -0.32   0.14 
 Warning message:
 In urbinEla(coef(estMvProbitLin)[1:4], xMeanLin, 3, model = "probit",  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
 > # semi-elasticity of age with standard errors (only standard errors, simplified)
-> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit", 
+> urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
 +   sqrt( diag( vcov( estMvProbitLin ) ) )[1:4] )
 semEla  stdEr 
--0.320  0.118 
+ -0.32   0.12 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> estMvProbitLinME <- margEff( estMvProbitLin, 
-+   data = as.data.frame( t( xMeanLin ) ), calcVCov = TRUE )
+> estMvProbitLinME <- margEff( estMvProbitLin,
++   data = as.data.frame( t( xMeanLin ) ), calcVCov = TRUE, eps = 1e-4 )
 > estMvProbitLinME[[ "d_y1_d_age" ]] * xMeanLin[ "age" ]
   age 
 -0.32 
 > estMvProbitLinMEVcov <- attr( estMvProbitLinME, "vcov" )[ 1, , ]
-> urbinEla( estMvProbitLinME[[ "d_y1_d_age" ]], xMeanLin["age"], 1, iPos = 0, 
+> urbinEla( estMvProbitLinME[[ "d_y1_d_age" ]], xMeanLin["age"], 1, iPos = 0,
 +   model = "lpm", sqrt( estMvProbitLinMEVcov[ "d_y1_d_age", "d_y1_d_age" ] ) )
 semEla  stdEr 
--0.320  0.118 
-> urbinEla( unlist( estMvProbitLinME[ c( 1, 3, 5 ) ] ), xMeanLin[-1], 2, iPos = 0, 
+ -0.32   0.12 
+> urbinEla( unlist( estMvProbitLinME[ c( 1, 3, 5 ) ] ), xMeanLin[-1], 2, iPos = 0,
 +   model = "lpm", estMvProbitLinMEVcov[ c( 1, 3, 5 ), c( 1, 3, 5 ) ] )
 semEla  stdEr 
--0.320  0.118 
+ -0.32   0.12 
 > 
 > 
 > ### quadratic in age
-> estMvProbitQuad <- mvProbit( 
-+   cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ, 
-+   data = Mroz87, nGHK = 300, iterlim = 0,
-+   start = c( -4.336110, -0.438580, 0.192469, -0.002497, 0.107107, 
+> estMvProbitQuad <- mvProbit(
++   cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
++   data = Mroz87, nGHK = 300, iterlim = 0, oneSidedGrad = TRUE, eps = 1e-4,
++   start = c( -4.336110, -0.438580, 0.192469, -0.002497, 0.107107,
 +     0.547970, 0.134075, -0.071620, 0.000741, 0.032548, -0.103104 ) )
 > summary( estMvProbitQuad )
 
@@ -148,21 +148,22 @@ Call:
 mvProbit(formula = cbind(lfp, husMoonlight) ~ kids + age + I(age^2) + 
     educ, data = Mroz87, start = c(-4.33611, -0.43858, 0.192469, 
     -0.002497, 0.107107, 0.54797, 0.134075, -0.07162, 0.000741, 
-    0.032548, -0.103104), nGHK = 300, iterlim = 0)
+    0.032548, -0.103104), nGHK = 300, oneSidedGrad = TRUE, eps = 1e-04, 
+    iterlim = 0)
 
 Coefficients:
         Estimate Std. error t value  Pr(> t)    
-b_1_0 -4.3361100  1.4015822  -3.094  0.00198 ** 
-b_1_1 -0.4385800  0.1341080  -3.270  0.00107 ** 
+b_1_0 -4.3361100  1.4015824  -3.094  0.00198 ** 
+b_1_1 -0.4385800  0.1341077  -3.270  0.00107 ** 
 b_1_2  0.1924690  0.0655681   2.935  0.00333 ** 
 b_1_3 -0.0024970  0.0007706  -3.240  0.00119 ** 
 b_1_4  0.1071070  0.0220489   4.858 1.19e-06 ***
-b_2_0  0.5479700  1.4730730   0.372  0.70990    
-b_2_1  0.1340750  0.1444193   0.928  0.35321    
-b_2_2 -0.0716200  0.0701753  -1.021  0.30745    
-b_2_3  0.0007410  0.0008239   0.899  0.36844    
-b_2_4  0.0325480  0.0222755   1.461  0.14397    
-R_1_2 -0.1031040  0.0629738  -1.637  0.10158    
+b_2_0  0.5479700  1.4730815   0.372  0.70990    
+b_2_1  0.1340750  0.1444198   0.928  0.35322    
+b_2_2 -0.0716200  0.0701757  -1.021  0.30745    
+b_2_3  0.0007410  0.0008239   0.899  0.36845    
+b_2_4  0.0325480  0.0222756   1.461  0.14397    
+R_1_2 -0.1031040  0.0629743  -1.637  0.10158    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -175,114 +176,114 @@ Log-likelihood: -926 on 11 Df
 > # semi-elasticity of age without standard errors
 > urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit" )
 semEla  stdEr 
--0.319     NA 
+ -0.32     NA 
 > # semi-elasticity of age based on numerical derivation
 > 100 * ( mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
 +   coef = coef( estMvProbitQuad ), data = Mroz87Upper ) -
 +     mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
 +       coef = coef( estMvProbitQuad ), data = Mroz87Lower ) )
-     lfp husMoonlight
-1 -0.319       -0.117
+    lfp husMoonlight
+1 -0.32        -0.12
 > # partial derivatives of the semi-elasticity wrt the coefficients
 > urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   seSimplify = FALSE )$derivCoef
-             kids      age      age     educ 
-1.10e-01 7.64e-02 2.07e+01 1.56e+03 1.35e+00 
+           kids     age     age    educ 
+1.1e-01 7.6e-02 2.1e+01 1.6e+03 1.3e+00 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla }, 
-+   t0 = coef( estMvProbitQuad )[1:5], 
+> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++   t0 = coef( estMvProbitQuad )[1:5],
 +   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" )
-     b_1_0  b_1_1 b_1_2 b_1_3 b_1_4
-[1,]  0.11 0.0764  20.7  1560  1.35
+     b_1_0 b_1_1 b_1_2 b_1_3 b_1_4
+[1,]  0.11 0.076    21  1560   1.3
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   seSimplify = TRUE )$derivCoef
 [1]    0    0   16 1361    0
 > # semi-elasticity of age with standard errors (full covariance matrix)
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   vcov( estMvProbitQuad )[1:5,1:5] )
 semEla  stdEr 
--0.319  0.114 
+ -0.32   0.11 
 > # semi-elasticity of age with standard errors (only standard errors)
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5], seSimplify = FALSE )
 semEla  stdEr 
--0.319  1.818 
+ -0.32   1.82 
 Warning messages:
 1: In urbinEla(coef(estMvProbitQuad)[1:5], xMeanQuad, c(3, 4), model = "probit",  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
 2: In urbinEla(allCoef = coef(estMvProbitQuad)[1:5], allXVal = xMeanQuad, xPos = c(3, 4), model = "probit", allCoefVcov = sqrt(diag(vcov(estMvProbitQuad)))[1:5], seSimplify = FALSE) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
 > # semi-elasticity of age with standard errors (only standard errors, simplified)
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5] )
 semEla  stdEr 
--0.319  1.483 
+ -0.32   1.48 
 Warning message:
 In urbinEla(allCoef = coef(estMvProbitQuad)[1:5], allXVal = xMeanQuad, xPos = c(3, 4), model = "probit", allCoefVcov = sqrt(diag(vcov(estMvProbitQuad)))[1:5]) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
 > # semi-elasticity of age with standard errors (only standard errors, xMeanSd)
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
-+   sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5], 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
++   sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ),
 +   seSimplify = FALSE )
 semEla  stdEr 
--0.319  0.110 
+ -0.32   0.11 
 Warning message:
 In urbinEla(coef(estMvProbitQuad)[1:5], xMeanQuad, c(3, 4), model = "probit",  :
   the returned standard error is likely very imprecise; you can provide the full covariance matrix via argument 'allCoefVcov' or do NOT set argument 'seSimplify' to FALSE to obtain a more precise standard error
 > # semi-elasticity of age with standard errors (only standard errors, xMeanSd, simplified)
-> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit", 
+> urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
 +   sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
 semEla  stdEr 
--0.319  0.135 
+ -0.32   0.13 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
-> estMvProbitQuadME <- margEff( estMvProbitQuad, 
-+   data = as.data.frame( t( xMeanQuad ) ), calcVCov = TRUE )
+> estMvProbitQuadME <- margEff( estMvProbitQuad,
++   data = as.data.frame( t( xMeanQuad ) ), calcVCov = TRUE, eps = 1e-4 )
 > estMvProbitQuadME[[ "d_y1_d_age" ]] * xMeanQuad[ "age" ] +
 +   2 * estMvProbitQuadME[[ "d_y1_d_I(age^2)" ]] * xMeanQuad[ "age" ]^2
-   age 
--0.319 
+  age 
+-0.32 
 > estMvProbitQuadMEVcov <- attr( estMvProbitQuadME, "vcov" )[ 1, , ]
-> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ), 
-+   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm", 
+> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ),
++   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm",
 +   estMvProbitQuadMEVcov[ c( 3, 5 ), c( 3, 5 ) ] )
 semEla  stdEr 
--0.319  0.114 
-> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1], 
-+   2:3, iPos = 0, model = "lpm", 
+ -0.32   0.11 
+> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1],
++   2:3, iPos = 0, model = "lpm",
 +   estMvProbitQuadMEVcov[ c( 1, 3, 5, 7 ), c( 1, 3, 5, 7 ) ] )
 semEla  stdEr 
--0.319  0.114 
-> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ), 
-+   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm", 
+ -0.32   0.11 
+> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ),
++   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 3, 5 ) ] )
 semEla  stdEr 
--0.319  1.407 
+ -0.32   1.39 
 Warning message:
 In urbinEla(allCoef = unlist(estMvProbitQuadME[c("d_y1_d_age", "d_y1_d_I(age^2)")]), allXVal = xMeanQuad["age"], xPos = 1:2, model = "lpm", allCoefVcov = sqrt(diag(estMvProbitQuadMEVcov))[c(3, 5)], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1], 
-+   2:3, iPos = 0, model = "lpm", 
+> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1],
++   2:3, iPos = 0, model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 1, 3, 5, 7 ) ] )
 semEla  stdEr 
--0.319  1.407 
+ -0.32   1.39 
 Warning message:
 In urbinEla(allCoef = unlist(estMvProbitQuadME[c(1, 3, 5, 7)]), allXVal = xMeanQuad[-1], xPos = 2:3, model = "lpm", allCoefVcov = sqrt(diag(estMvProbitQuadMEVcov))[c(1, 3, 5, 7)], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ), 
-+   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm", 
+> urbinEla( unlist( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] ),
++   xMeanQuad["age"], 1:2, iPos = 0, model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 3, 5 ) ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
 semEla  stdEr 
--0.319  0.128 
-> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1], 
-+   2:3, iPos = 0, model = "lpm", 
+ -0.32   0.13 
+> urbinEla( unlist( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ] ), xMeanQuad[-1],
++   2:3, iPos = 0, model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 1, 3, 5, 7 ) ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
 semEla  stdEr 
--0.319  0.128 
+ -0.32   0.13 
 > 
 > 
 > ### age is interval-coded (age is in the range 30-60)
@@ -291,15 +292,15 @@ semEla  stdEr
 > Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
 > Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
 > Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
-> all.equal( 
+> all.equal(
 +   Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
 +   rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
 > # estimation
-> estMvProbitInt <- mvProbit( 
-+   cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ, 
-+   data = Mroz87, nGHK = 300, iterlim = 0,
-+   start = c( -0.8929, -0.3775, 0.1346, 0.1219, -0.5144, 0.1082, 
+> estMvProbitInt <- mvProbit(
++   cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
++   data = Mroz87, nGHK = 300, iterlim = 0, oneSidedGrad = TRUE, eps = 1e-4,
++   start = c( -0.8929, -0.3775, 0.1346, 0.1219, -0.5144, 0.1082,
 +     -1.3155, 0.0883, 0.3853, 0.2785, 0.2929, 0.0326, -0.1018 ) )
 > summary( estMvProbitInt )
 
@@ -307,7 +308,8 @@ Call:
 mvProbit(formula = cbind(lfp, husMoonlight) ~ kids + age30.37 + 
     age38.44 + age53.60 + educ, data = Mroz87, start = c(-0.8929, 
     -0.3775, 0.1346, 0.1219, -0.5144, 0.1082, -1.3155, 0.0883, 
-    0.3853, 0.2785, 0.2929, 0.0326, -0.1018), nGHK = 300, iterlim = 0)
+    0.3853, 0.2785, 0.2929, 0.0326, -0.1018), nGHK = 300, oneSidedGrad = TRUE, 
+    eps = 1e-04, iterlim = 0)
 
 Coefficients:
       Estimate Std. error t value  Pr(> t)    
@@ -319,8 +321,8 @@ b_1_4 -0.51440    0.16311  -3.154  0.00161 **
 b_1_5  0.10820    0.02186   4.949 7.46e-07 ***
 b_2_0 -1.31550    0.30303  -4.341 1.42e-05 ***
 b_2_1  0.08830    0.13979   0.632  0.52761    
-b_2_2  0.38530    0.13875   2.777  0.00549 ** 
-b_2_3  0.27850    0.14913   1.868  0.06183 .  
+b_2_2  0.38530    0.13876   2.777  0.00549 ** 
+b_2_3  0.27850    0.14913   1.867  0.06183 .  
 b_2_4  0.29290    0.17521   1.672  0.09459 .  
 b_2_5  0.03260    0.02271   1.435  0.15122    
 R_1_2 -0.10180    0.06302  -1.615  0.10623    
@@ -332,22 +334,22 @@ Return code 4: Iteration limit exceeded.
 Log-likelihood: -924 on 13 Df
 
 > # mean values of the explanatory variables
-> xMeanInt <- c( xMeanLin[1:2], mean( Mroz87$age30.37 ), 
+> xMeanInt <- c( xMeanLin[1:2], mean( Mroz87$age30.37 ),
 +   mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMeanLin[4] )
 > # semi-elasticity of age without standard errors
-> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt, 
+> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "probit" )
 semEla  stdEr 
--0.375     NA 
+ -0.38     NA 
 > # semi-elasticities based on numerical derivation
 > Mroz87Lower <- Mroz87
 > Mroz87Lower$age <- Mroz87$age * 0.95
 > Mroz87Lower$age30.37 <- Mroz87Lower$age <= 37.5
 > Mroz87Lower$age38.44 <- Mroz87Lower$age > 37.5 & Mroz87Lower$age <= 44.5
 > Mroz87Lower$age45.52 <- Mroz87Lower$age > 44.5 & Mroz87Lower$age <= 52.5
-> Mroz87Lower$age53.60 <- Mroz87Lower$age > 52.5 
-> all.equal( 
-+   Mroz87Lower$age30.37 + Mroz87Lower$age38.44 + Mroz87Lower$age45.52 + 
+> Mroz87Lower$age53.60 <- Mroz87Lower$age > 52.5
+> all.equal(
++   Mroz87Lower$age30.37 + Mroz87Lower$age38.44 + Mroz87Lower$age45.52 +
 +     Mroz87Lower$age53.60, rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
 > Mroz87Upper <- Mroz87
@@ -355,86 +357,86 @@ semEla  stdEr
 > Mroz87Upper$age30.37 <- Mroz87Upper$age <= 37.5
 > Mroz87Upper$age38.44 <- Mroz87Upper$age > 37.5 & Mroz87Upper$age <= 44.5
 > Mroz87Upper$age45.52 <- Mroz87Upper$age > 44.5 & Mroz87Upper$age <= 52.5
-> Mroz87Upper$age53.60 <- Mroz87Upper$age > 52.5 
-> all.equal( 
-+   Mroz87Upper$age30.37 + Mroz87Upper$age38.44 + Mroz87Upper$age45.52 + 
+> Mroz87Upper$age53.60 <- Mroz87Upper$age > 52.5
+> all.equal(
++   Mroz87Upper$age30.37 + Mroz87Upper$age38.44 + Mroz87Upper$age45.52 +
 +     Mroz87Upper$age53.60, rep( 1, nrow( Mroz87 ) ) )
 [1] TRUE
-> 10 * colMeans( 
-+   mvProbitExp( 
+> 10 * colMeans(
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = Mroz87Upper ) -
-+       mvProbitExp( 
++       mvProbitExp(
 +         cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +         coef = coef( estMvProbitInt ), data = Mroz87Lower ) )
          lfp husMoonlight 
-     -0.3516      -0.0808 
+      -0.352       -0.081 
 > Mroz87LowerMean <- Mroz87Lower
 > Mroz87UpperMean <- Mroz87Upper
 > Mroz87LowerMean$kids <- Mroz87UpperMean$kids <- xMeanInt[ "kids" ]
 > Mroz87LowerMean$educ <- Mroz87UpperMean$educ <- xMeanInt[ "educ" ]
-> 10 * colMeans( 
-+   mvProbitExp( 
+> 10 * colMeans(
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = Mroz87UpperMean ) -
-+     mvProbitExp( 
++     mvProbitExp(
 +       cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +       coef = coef( estMvProbitInt ), data = Mroz87LowerMean ) )
          lfp husMoonlight 
-     -0.3663      -0.0748 
+      -0.366       -0.075 
 > # partial derivatives of the semi-elasticity wrt the coefficients
-> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt, 
+> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "probit" )$derivCoef
-[1] -0.00415 -0.00289 -0.55517 -0.04940  0.54540 -0.05094
+[1] -0.0041 -0.0029 -0.5552 -0.0494  0.5454 -0.0509
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla }, 
-+   t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt, 
-+   xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ), 
+> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
++   t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt,
++   xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
 +   model = "probit" )
-        b_1_0    b_1_1  b_1_2   b_1_3 b_1_4   b_1_5
-[1,] -0.00415 -0.00289 -0.555 -0.0494 0.545 -0.0509
+       b_1_0   b_1_1 b_1_2  b_1_3 b_1_4  b_1_5
+[1,] -0.0041 -0.0029 -0.56 -0.049  0.55 -0.051
 > # semi-elasticity of age with standard errors (full covariance matrix)
-> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt, 
-+   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), 
+> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ),
 +   model = "probit", vcov( estMvProbitInt )[1:6,1:6] )
 semEla  stdEr 
--0.375  0.102 
+ -0.38   0.10 
 > # semi-elasticity of age with standard errors (only standard errors)
-> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt, 
-+   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), 
+> urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
++   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ),
 +   model = "probit", sqrt( diag( vcov( estMvProbitInt ) ) )[1:6] )
 semEla  stdEr 
--0.375  0.115 
+ -0.38   0.11 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
 > names( xMeanInt )[3:5] <- c( "age30.37", "age38.44", "age53.60" )
-> estMvProbitIntME <- margEff( estMvProbitInt, 
-+   data = as.data.frame( t( xMeanInt ) ), calcVCov = TRUE,
+> estMvProbitIntME <- margEff( estMvProbitInt,
++   data = as.data.frame( t( xMeanInt ) ), calcVCov = TRUE, eps = 1e-4,
 +   dummyVars = names( xMeanInt )[3:5] )
 > estMvProbitIntMEVcov <- attr( estMvProbitIntME, "vcov" )[ 1, , ]
-> urbinElaInt( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), xMeanInt[ 3:5 ], 
-+   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+> urbinElaInt( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), xMeanInt[ 3:5 ],
++   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 3, 5, 7 ), c( 3, 5, 7 ) ] )
 semEla  stdEr 
--0.377  0.104 
-> urbinElaInt( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), xMeanInt[-1], 
-+   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+ -0.38   0.10 
+> urbinElaInt( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), xMeanInt[-1],
++   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 1, 3, 5, 7, 9 ), c( 1, 3, 5, 7, 9 ) ] )
 semEla  stdEr 
--0.377  0.104 
-> urbinElaInt( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), xMeanInt[ 3:5 ], 
-+   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+ -0.38   0.10 
+> urbinElaInt( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), xMeanInt[ 3:5 ],
++   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 3, 5, 7 ) ] )
 semEla  stdEr 
--0.377  0.117 
-> urbinElaInt( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), xMeanInt[-1], 
-+   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm", 
+ -0.38   0.12 
+> urbinElaInt( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), xMeanInt[-1],
++   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 1, 3, 5, 7, 9 ) ] )
 semEla  stdEr 
--0.377  0.117 
+ -0.38   0.12 
 > 
 > 
-> ### effect of age changing between discrete intervals 
-> ### if age is used as linear explanatory variable 
+> ### effect of age changing between discrete intervals
+> ### if age is used as linear explanatory variable
 > # mean values of the 'other' explanatory variables
 > xMeanLinInt <- c( xMeanLin[ 1:2 ], NA, xMeanLin[4] )
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -442,7 +444,7 @@ semEla  stdEr
 > urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )
 effect  stdEr 
--0.151     NA 
+ -0.15     NA 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # based on predicted values
 > Mroz87Ref <- as.data.frame( t( xMeanLin ) )
@@ -455,53 +457,53 @@ effect  stdEr
 +   coef = coef( estMvProbitLin ), data = Mroz87Int ) -
 +     mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + educ,
 +       coef = coef( estMvProbitLin ), data = Mroz87Ref )
-     lfp husMoonlight
-1 -0.151      -0.0579
+    lfp husMoonlight
+1 -0.15       -0.058
 > # partial derivatives of the semi-elasticity wrt the coefficients
-> urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3, 
+> urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
-[1] 0.0197 0.0137 8.6534 0.2417
+[1] 0.020 0.014 8.653 0.242
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
-+   t0 = coef( estMvProbitLin )[1:4], 
-+   allXVal = xMeanLinInt, xPos = 3, 
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++   t0 = coef( estMvProbitLin )[1:4],
++   allXVal = xMeanLinInt, xPos = 3,
 +   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
-      b_1_0  b_1_1 b_1_2 b_1_3
-[1,] 0.0197 0.0137  8.65 0.242
+     b_1_0 b_1_1 b_1_2 b_1_3
+[1,]  0.02 0.014   8.7  0.24
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (full covariance matrix) 
+> # (full covariance matrix)
 > urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
-+   c( 30, 40 ), c( 50, 60 ), model = "probit", 
++   c( 30, 40 ), c( 50, 60 ), model = "probit",
 +   allCoefVcov = vcov( estMvProbitLin )[1:4,1:4] )
- effect   stdEr 
--0.1506  0.0554 
+effect  stdEr 
+-0.151  0.055 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (only standard errors) 
+> # (only standard errors)
 > urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
-+   c( 30, 40 ), c( 50, 60 ), model = "probit", 
++   c( 30, 40 ), c( 50, 60 ), model = "probit",
 +   allCoefVcov = sqrt( diag( vcov( estMvProbitLin ) ) )[1:4] )
- effect   stdEr 
--0.1506  0.0622 
+effect  stdEr 
+-0.151  0.062 
 > # semi-elasticity of age based on marginal effects
-> urbinEffInt( estMvProbitLinME[ "d_y1_d_age" ], NULL, 1, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estMvProbitLinME[ "d_y1_d_age" ], NULL, 1, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( estMvProbitLinMEVcov[ "d_y1_d_age", "d_y1_d_age" ] ) )
- effect   stdEr 
--0.1504  0.0556 
-> urbinEffInt( estMvProbitLinME[ c( 1, 3, 5 ) ], NULL, 2, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+effect  stdEr 
+-0.150  0.056 
+> urbinEffInt( estMvProbitLinME[ c( 1, 3, 5 ) ], NULL, 2, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estMvProbitLinMEVcov[ c( 1, 3, 5 ), c( 1, 3, 5 ) ] )
- effect   stdEr 
--0.1504  0.0556 
-> urbinEffInt( estMvProbitLinME[ c( 1, 3, 5 ) ], NULL, 2, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+effect  stdEr 
+-0.150  0.056 
+> urbinEffInt( estMvProbitLinME[ c( 1, 3, 5 ) ], NULL, 2, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitLinMEVcov ) )[ c( 1, 3, 5 ) ] )
- effect   stdEr 
--0.1504  0.0556 
+effect  stdEr 
+-0.150  0.056 
 > 
 > 
-> ### effect of age changing between discrete intervals 
-> ### if age is used as linear and quadratic explanatory variable 
+> ### effect of age changing between discrete intervals
+> ### if age is used as linear and quadratic explanatory variable
 > # mean values of the 'other' explanatory variables
 > xMeanQuadInt <- c( xMeanLin[ 1:2 ], NA, NA, xMeanLin[4] )
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -509,226 +511,226 @@ effect  stdEr
 > urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )
 effect  stdEr 
--0.253     NA 
+ -0.25     NA 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # based on predicted values
 > mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
 +   coef = coef( estMvProbitQuad ), data = Mroz87Int ) -
 +   mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
 +     coef = coef( estMvProbitQuad ), data = Mroz87Ref )
-     lfp husMoonlight
-1 -0.253      -0.0327
+    lfp husMoonlight
+1 -0.25       -0.033
 > # partial derivatives of the effect wrt the coefficients
-> urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ), 
+> urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
-[1] 2.17e-03 1.51e-03 7.67e+00 6.86e+02 2.66e-02
+[1] 2.2e-03 1.5e-03 7.7e+00 6.9e+02 2.7e-02
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect }, 
-+   t0 = coef( estMvProbitQuad )[1:5], 
-+   allXVal = xMeanQuadInt, xPos = c( 3, 4 ), 
+> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++   t0 = coef( estMvProbitQuad )[1:5],
++   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
 +   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
-       b_1_0   b_1_1 b_1_2 b_1_3  b_1_4
-[1,] 0.00217 0.00151  7.67   686 0.0266
+      b_1_0  b_1_1 b_1_2 b_1_3 b_1_4
+[1,] 0.0022 0.0015   7.7   686 0.027
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (full covariance matrix) 
+> # (full covariance matrix)
 > urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
 +   c( 30, 40 ), c( 50, 60 ), model = "probit",
 +   allCoefVcov = vcov( estMvProbitQuad )[1:5,1:5] )
- effect   stdEr 
--0.2530  0.0627 
+effect  stdEr 
+-0.253  0.063 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
-> # (only standard errors) 
+> # (only standard errors)
 > urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
-+   c( 30, 40 ), c( 50, 60 ), model = "probit", 
++   c( 30, 40 ), c( 50, 60 ), model = "probit",
 +   allCoefVcov = sqrt( diag( vcov( estMvProbitQuad ) ) )[1:5] )
 effect  stdEr 
--0.253  0.730 
+ -0.25   0.73 
 Warning message:
 In urbinEffInt(allCoef = coef(estMvProbitQuad)[1:5], allXVal = xMeanQuadInt, xPos = c(3, 4), refBound = c(30, 40), intBound = c(50, 60), model = "probit", allCoefVcov = sqrt(diag(vcov(estMvProbitQuad)))[1:5]) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
 > # effects of age changing from the 30-40 interval to the 50-60 interval
 > # (standard errors + mean value and standard deviation of age)
 > urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
-+   c( 30, 40 ), c( 50, 60 ), model = "probit", 
++   c( 30, 40 ), c( 50, 60 ), model = "probit",
 +   allCoefVcov = sqrt( diag( vcov( estMvProbitQuad ) )[1:5] ),
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
- effect   stdEr 
--0.2530  0.0713 
+effect  stdEr 
+-0.253  0.071 
 > # semi-elasticity of age based on marginal effects
-> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ], 
-+   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
-+   estMvProbitQuadMEVcov[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ), 
+> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ],
++   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
++   estMvProbitQuadMEVcov[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ),
 +     c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] )
- effect   stdEr 
--0.2426  0.0602 
-> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+effect  stdEr 
+-0.243  0.059 
+> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   estMvProbitQuadMEVcov[ c( 1, 3, 5, 7 ), c( 1, 3, 5, 7 ) ] )
- effect   stdEr 
--0.2426  0.0602 
-> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ], 
-+   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+effect  stdEr 
+-0.243  0.059 
+> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ],
++   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ] )
 effect  stdEr 
--0.243  0.681 
+ -0.24   0.67 
 Warning message:
 In urbinEffInt(allCoef = estMvProbitQuadME[c("d_y1_d_age", "d_y1_d_I(age^2)")], allXVal = NULL, xPos = 1:2, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = sqrt(diag(estMvProbitQuadMEVcov))[c("d_y1_d_age", "d_y1_d_I(age^2)")], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 1, 3, 5, 7 ) ] )
 effect  stdEr 
--0.243  0.681 
+ -0.24   0.67 
 Warning message:
 In urbinEffInt(allCoef = estMvProbitQuadME[c(1, 3, 5, 7)], allXVal = NULL, xPos = 2:3, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = sqrt(diag(estMvProbitQuadMEVcov))[c(1, 3, 5, 7)], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ], 
-+   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+> urbinEffInt( estMvProbitQuadME[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ],
++   NULL, 1:2, iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( "d_y1_d_age", "d_y1_d_I(age^2)" ) ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
- effect   stdEr 
--0.2426  0.0664 
-> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0, 
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm", 
+effect  stdEr 
+-0.243  0.065 
+> urbinEffInt( estMvProbitQuadME[ c( 1, 3, 5, 7 ) ], NULL, 2:3, iPos = 0,
++   c( 30, 40 ), c( 50, 60 ), model = "lpm",
 +   sqrt( diag( estMvProbitQuadMEVcov ) )[ c( 1, 3, 5, 7 ) ],
 +   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
- effect   stdEr 
--0.2426  0.0664 
+effect  stdEr 
+-0.243  0.065 
 > 
 > 
 > ### grouping and re-basing categorical variables
 > ### effects of age changing from the 30-44 category to the 53-60 category
 > # without standard errors
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   model = "probit" )
 effect  stdEr 
--0.252     NA 
+ -0.25     NA 
 > # effects calculated based on predicted values
-> df30.37 <- df38.44 <- df45.52 <- df53.60 <- 
+> df30.37 <- df38.44 <- df45.52 <- df53.60 <-
 +   as.data.frame( t( c( xMeanInt, lfp = 1, husMoonlight = 1 ) ) )
 > df30.37[ , 3:5 ] <- c( TRUE, FALSE, FALSE )
 > df38.44[ , 3:5 ] <- c( FALSE, TRUE, FALSE )
 > df45.52[ , 3:5 ] <- c( FALSE, FALSE, FALSE )
 > df53.60[ , 3:5 ] <- c( FALSE, FALSE, TRUE )
-> mvProbitExp( 
+> mvProbitExp(
 +   cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +   coef = coef( estMvProbitInt ), data = df53.60 ) -
 +   sum( Mroz87$age30.37 ) / sum( Mroz87$age30.37 + Mroz87$age38.44 ) *
-+   mvProbitExp( 
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = df30.37 ) -
 +   sum( Mroz87$age38.44 ) / sum( Mroz87$age30.37 + Mroz87$age38.44 ) *
-+   mvProbitExp( 
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = df38.44 )
-     lfp husMoonlight
-1 -0.252       -0.017
+    lfp husMoonlight
+1 -0.25       -0.017
 > # partial derivatives of the effect wrt the coefficients
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   model = "probit" )$derivCoef
-[1] -0.00455 -0.00317 -0.22397 -0.15705  0.37647 -0.05595
+[1] -0.0046 -0.0032 -0.2240 -0.1570  0.3765 -0.0559
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
-+   t0 = coef( estMvProbitInt )[1:6], 
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), 
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++   t0 = coef( estMvProbitInt )[1:6],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
 +   model = "probit" )
-        b_1_0    b_1_1  b_1_2  b_1_3 b_1_4   b_1_5
-[1,] -0.00455 -0.00317 -0.224 -0.157 0.376 -0.0559
+       b_1_0   b_1_1 b_1_2 b_1_3 b_1_4  b_1_5
+[1,] -0.0046 -0.0032 -0.22 -0.16  0.38 -0.056
 > # with full covariance matrix
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   model = "probit", allCoefVcov = vcov( estMvProbitInt )[1:6,1:6] )
- effect   stdEr 
--0.2524  0.0658 
+effect  stdEr 
+-0.252  0.066 
 > # with standard errors only
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
 +   model = "probit", allCoefVcov = sqrt( diag( vcov( estMvProbitInt ) ) )[1:6] )
- effect   stdEr 
--0.2524  0.0713 
+effect  stdEr 
+-0.252  0.071 
 > # semi-elasticity of age based on marginal effects
-> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), 
-+   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm", 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ),
++   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 3, 5, 7 ), c( 3, 5, 7 ) ] )
- effect   stdEr 
--0.2534  0.0673 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), 
-+   xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm", 
+effect  stdEr 
+-0.253  0.067 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ),
++   xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 1, 3, 5, 7, 9 ), c( 1, 3, 5, 7, 9 ) ] )
- effect   stdEr 
--0.2534  0.0673 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), 
-+   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm", 
+effect  stdEr 
+-0.253  0.067 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ),
++   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 3, 5, 7 ) ] )
- effect   stdEr 
--0.2534  0.0729 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), 
-+   xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm", 
+effect  stdEr 
+-0.253  0.073 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ),
++   xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 1, 3, 5, 7, 9 ) ] )
- effect   stdEr 
--0.2534  0.0729 
+effect  stdEr 
+-0.253  0.073 
 > 
 > ### effects of age changing from the 53-60 category to the 38-52 category
 > # without standard errors
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   model = "probit" )
 effect  stdEr 
- 0.223     NA 
+  0.22     NA 
 > # effects calculated based on predicted values
 > sum( Mroz87$age38.44 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
-+   mvProbitExp( 
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = df38.44 ) +
 +   sum( Mroz87$age45.52 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
-+   mvProbitExp( 
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = df45.52 ) -
-+   mvProbitExp( 
++   mvProbitExp(
 +     cbind( lfp, husMoonlight ) ~ kids + age30.37 + age38.44 + age53.60 + educ,
 +     coef = coef( estMvProbitInt ), data = df53.60 )
-    lfp husMoonlight
-1 0.223      -0.0535
+   lfp husMoonlight
+1 0.22       -0.053
 > # partial derivatives of the effect wrt the coefficients
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   model = "probit" )$derivCoef
-[1]  0.01235  0.00859  0.00000  0.16896 -0.37647  0.15169
+[1]  0.0123  0.0086  0.0000  0.1690 -0.3765  0.1517
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect }, 
-+   t0 = coef( estMvProbitInt )[1:6], 
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ), 
+> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++   t0 = coef( estMvProbitInt )[1:6],
++   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
 +   model = "probit" )
-      b_1_0   b_1_1 b_1_2 b_1_3  b_1_4 b_1_5
-[1,] 0.0123 0.00859     0 0.169 -0.376 0.152
+     b_1_0  b_1_1 b_1_2 b_1_3 b_1_4 b_1_5
+[1,] 0.012 0.0086     0  0.17 -0.38  0.15
 > # with full covariance matrix
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   model = "probit", allCoefVcov = vcov( estMvProbitInt )[1:6,1:6] )
 effect  stdEr 
-0.2230 0.0607 
+ 0.223  0.061 
 > # with standard errors only
-> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ), 
+> urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
 +   model = "probit", allCoefVcov = sqrt( diag( vcov( estMvProbitInt ) ) )[1:6] )
 effect  stdEr 
-0.2230 0.0659 
+ 0.223  0.066 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), 
-+   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm", 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ),
++   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 3, 5, 7 ), c( 3, 5, 7 ) ] )
 effect  stdEr 
-0.2236 0.0618 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), 
-+   xMeanInt[ -1 ], c(2:4), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm", 
+ 0.224  0.062 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ),
++   xMeanInt[ -1 ], c(2:4), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm",
 +   estMvProbitIntMEVcov[ c( 1, 3, 5, 7, 9 ), c( 1, 3, 5, 7, 9 ) ] )
 effect  stdEr 
-0.2236 0.0618 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ), 
-+   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm", 
+ 0.224  0.062 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 3, 5, 7 ) ] ),
++   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 3, 5, 7 ) ] )
 effect  stdEr 
  0.224  0.067 
-> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ), 
-+   xMeanInt[ -1 ], c(2:4), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm", 
+> urbinEffCat( unlist( estMvProbitIntME[ c( 1, 3, 5, 7, 9 ) ] ),
++   xMeanInt[ -1 ], c(2:4), iPos = 0, c( 0, 1, -1, 1 ), model = "lpm",
 +   sqrt( diag( estMvProbitIntMEVcov ) )[ c( 1, 3, 5, 7, 9 ) ] )
 effect  stdEr 
  0.224  0.067 
 > 
 > proc.time()
    user  system elapsed 
-  5.351   0.904   6.252 
+   3.51    0.47    3.99 

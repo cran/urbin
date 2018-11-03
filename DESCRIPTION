@@ -1,6 +1,6 @@
 Package: urbin
-Version: 0.1-4
-Date: 2018-10-31
+Version: 0.1-6
+Date: 2018-11-01
 Title: Unifying Estimation Results with Binary Dependent Variables
 Author: Arne Henningsen, Geraldine Henningsen
 Maintainer: Arne Henningsen <arne.henningsen@gmail.com>
@@ -28,6 +28,6 @@ Description: Calculate unified measures
 License: GPL (>= 2)
 URL: http://r-forge.r-project.org/projects/urbin/
 NeedsCompilation: no
-Packaged: 2018-10-31 10:06:46 UTC; gsl324
+Packaged: 2018-11-01 14:02:40 UTC; gsl324
 Repository: CRAN
-Date/Publication: 2018-10-31 10:50:04 UTC
+Date/Publication: 2018-11-03 17:10:04 UTC
