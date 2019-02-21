@@ -1,5 +1,5 @@
 
-R version 3.5.1 (2018-07-02) -- "Feather Spray"
+R version 3.5.2 (2018-12-20) -- "Eggshell Igloo"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -26,6 +26,15 @@ If you have questions, suggestions, or comments regarding the 'maxLik' package, 
 https://r-forge.r-project.org/projects/maxlik/
 > library( "mlogit" )
 Loading required package: Formula
+Loading required package: zoo
+
+Attaching package: 'zoo'
+
+The following objects are masked from 'package:base':
+
+    as.Date, as.Date.numeric
+
+Loading required package: lmtest
 > options( digits = 4 )
 > 
 > # load data set
@@ -52,7 +61,7 @@ Loading required package: Formula
 
 Call:
 mlogit(formula = lfp3 ~ 0 | kids + age + educ, data = Mroz87, 
-    reflevel = "no", shape = "wide", method = "nr", print.level = 0)
+    reflevel = "no", shape = "wide", method = "nr")
 
 Frequencies of alternatives:
    no  full  part 
@@ -315,7 +324,7 @@ In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  
 
 Call:
 mlogit(formula = lfp3 ~ 0 | kids + age + I(age^2) + educ, data = Mroz87, 
-    reflevel = "no", shape = "wide", method = "nr", print.level = 0)
+    reflevel = "no", shape = "wide", method = "nr")
 
 Frequencies of alternatives:
    no  full  part 
@@ -734,8 +743,7 @@ semEla  stdEr
 
 Call:
 mlogit(formula = lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + 
-    educ, data = Mroz87, reflevel = "no", shape = "wide", method = "nr", 
-    print.level = 0)
+    educ, data = Mroz87, reflevel = "no", shape = "wide", method = "nr")
 
 Frequencies of alternatives:
    no  full  part 
@@ -1834,4 +1842,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  0.948   0.036   0.978 
+  1.645   0.055   1.693 

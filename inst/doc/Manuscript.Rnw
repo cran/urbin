@@ -1,0 +1,2474 @@
+\documentclass[a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{calrsfs}
+\usepackage[english]{babel}
+\usepackage{rotating}
+% \usepackage{endfloat}
+% \DeclareDelayedFloatFlavor{sidewaystable}{table}
+\usepackage{booktabs}
+\usepackage{bm}
+\usepackage{dcolumn}
+\usepackage{color}
+\usepackage[bookmarks=TRUE,
+            colorlinks,
+            citecolor=black,
+            filecolor=black,
+            linkcolor=black,
+            urlcolor=black,
+            ]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\R}{\textsf{R}}
+\newcommand{\se}{\mathrm{se}\,}
+\newcommand{\var}{\mathrm{Var}\,}
+\newcommand{\cov}{\mathrm{Cov}\,}
+\setlength{\emergencystretch}{3em}
+
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Extracting and Unifying Semi-Elasticities and Effect Sizes from Studies with Binary Dependent Variables}
+
+\title{ Extracting and Unifying Semi-Elasticities\\
+   and Effect Sizes from Studies\\
+   with Binary Dependent Variables }
+\date{\vspace{-5ex}}
+
+\author{
+   {Geraldine Henningsen}%
+\footnote{corresponding author.
+    Technical University of Denmark,
+    Department of Management Engineering,
+    Produktionstorvet~426, 2800~Kgns.~Lyngby, Denmark.
+    Phone +45-2135-8518, e-mail: \url{gehe@dtu.dk}.}
+\and
+   {Arne Henningsen}%
+\footnote{
+    University of Copenhagen,
+    Department of Food and Resource Economics,
+    Rolighedsvej~25, 1958~Frederiksberg~C, Denmark.
+    Phone: +45-3533-2274, e-mail: \url{arne@ifro.ku.dk}.}
+\thanks{Geraldine Henningsen was supported by the `SAVE-E' project funded by the
+        `Innovation Fund Denmark' (grant number:~4106-00009B).
+        The authors declare no conflicts of interest.
+        Senior authorship is shared.}
+}
+
+\begin{document}
+%\SweaveOpts{concordance=TRUE}
+
+\maketitle
+
+\begin{abstract}
+Combining the results from regression analyses in a meta-analysis
+often proves difficult
+because differences in the statistical methods and in the units of measurement
+or the encoding of the variables invalidate a direct comparison of
+the regression coefficients.
+In this article, we suggest simple and straightforward methods to extract
+unified measures for quantifying effects on binary dependent variables
+that are comparable across different studies
+even if the studies use different statistical methods,
+different units of measurement, or different codings of the variables.
+The suggested effect measures can be applied to continuous,
+interval-coded, and categorical covariates.
+We, furthermore, suggest methods to obtain valid approximations of the standard errors
+of the unified effect measures that can be used, e.g.,
+as weighting factors in a subsequent meta-analysis.
+We have implemented all suggested methods
+in the \R{} package \pkg{urbin}
+that we use to demonstrate the application of our methodology.
+\bigskip
+
+Keywords: binary dependent variables, meta-analysis, logit, probit
+
+\end{abstract}
+
+%===================================== Introduction =======================================
+
+\section{Introduction}
+\label{sec:intro}
+Combining the results from different regression analyses in a meta-analysis
+often proves difficult because differences in the applied estimation methods and
+differences in the units of measurement or the encoding
+of the variables of interest invalidate a direct comparison of the regression coefficients.
+For simple linear regression models, e.g., ordinary least squares regression models,
+these problems can to some extent be overcome
+by calculating an `elasticity' for each continuous covariate of interest at the sample mean,
+and a relative effect size of each categorical covariate of interest.
+These measures indicate by how many percent the dependent variable changes
+if a continuous covariate increases by one percent
+or if a categorical covariate changes from a reference category
+to the category of interest.
+However, for many non-linear regression models,
+e.g., generalised linear models,
+this approach is no longer straightforward and often requires more statistical information
+than is usually provided in articles,
+in particular if the user wishes to obtain valid standard errors for those measures.
+
+This article introduces simple and straightforward methods to extract comparable effect measures
+and their corresponding standard errors from studies with binary and categorical dependent variables.%
+\footnote{The estimation methods covered here are the linear probability model,
+logistic regression, probit regression,
+ordinal probit regression, multivariate probit regression,
+and multinomial logistic regression.
+We refrain for the time being from estimation methods for discrete choice experiments,
+e.g., conditional logistic regression, or mixed logistic regression.
+}
+We demonstrate how to derive semi-elasticities for continuous covariates and
+effect size measures for categorical or ordered covariates from the statistical information
+usually provided in articles.
+Furthermore, we demonstrate how to transform and unify differently encoded variables,
+by showing how to calculate a semi-elasticity of an interval-coded covariate,
+how to calculate the effect size by turning a continuous
+covariate into an interval-coded covariate,
+and how to change the reference category or
+the grouping of a categorical covariate in order to make effects comparable across
+different studies.
+Finally, we introduce a simple and novel way to calculate valid approximations
+of the standard errors for the derived semi-elasticities and effect size measures
+in cases where the full variance-covariance matrix of the regression model is unavailable%
+---which we deem to be the standard for most publications.
+
+We demonstrate the application of our methodology by means of a data set
+on women's labour force participation \cite{Mroz1987}
+and the \R{} \cite{RCT2018} package \pkg{urbin} \cite{r-urbin},
+in which we have implemented all methods that we suggest in this article.
+
+The article is structured as follows: section two gives a brief introduction to the
+data set;
+section three briefly presents the regression methods
+that we cover in this article;
+sections four to seven discuss the various approaches for calculating semi-elasticities,
+effect sizes, and corresponding standard errors;
+section eight demonstrates how these approaches can be applied
+to non-binary categorical dependent variables;
+finally, section nine concludes.
+
+%======================================= Data =========================================
+
+\section{Data for empirical example}
+\label{sec:data}
+
+We use an empirical example
+based on a data set on women's labour force participation \cite{Mroz1987}
+to demonstrate the application of our methodology using \R{} package
+\pkg{urbin} \cite{r-urbin}
+and to test the validity of the approximated standard errors in cases where the
+full variance-covariance matrix is unavailable to the user.
+The data set is available through the \R{} package \pkg{sampleSelection} \cite{Toomet2008}
+under the name~\code{Mroz87}.
+<<dataLoad,results='hide', echo=FALSE>>=
+data( "Mroz87", package = "sampleSelection" )
+@
+The data set contains 753~observations on married women and their respective
+labour force participation in the year 1975,
+as well as various socio-economic background variables.
+In total the data set includes 22~variables.
+Table~\ref{tab:descStats} provides the summary statistics
+of the variables in this data set.%
+\footnote{%
+A more detailed description of the variables in this data set
+is available, e.g., in the documentation of the \pkg{sampleSelection}
+package.
+The \R{} code that loads the data set and prepares it
+for the examples in Sections~\ref{sec:semela} to~\ref{sec:non-binaryDepVar}
+is available in Appendix Section~\ref{sec:RCodeData}.
+}
+
+%%% moved this code here so that 'kids', 'lfp3', and the variables with age
+%%% categories are included in the table with descriptive statistics
+<<dataLfp3, echo=FALSE, results='hide'>>=
+Mroz87$lfp3 <- factor( ifelse( Mroz87$hours == 0, "no",
+  ifelse( Mroz87$hours <= 1300, "part", "full" ) ),
+  ordered = TRUE, levels = c( "no", "part", "full" ) )
+@
+<<dataKids, echo=FALSE, results='hide' >>=
+Mroz87$kids <- Mroz87$kids5 + Mroz87$kids618
+@
+<<dataAgeInt, echo=FALSE, results='hide' >>=
+Mroz87$age30.37 <- Mroz87$age >= 30 & Mroz87$age <= 37
+Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
+Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
+Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
+all.equal(
+  Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
+  rep( 1, nrow( Mroz87 ) ) )
+@
+<<tabDescStat,results='asis', echo=FALSE, message = FALSE >>=
+library( "stargazer" )
+stargazer( Mroz87, title = "Descriptive Statistics",
+  label = "tab:descStats",
+  float.env = "sidewaystable", header = FALSE, digits = 2, align = TRUE,
+  omit.summary.stat = c( "p25", "p75" ) )
+@
+
+In our empirical example,
+we use the women's labour force participation (\code{lfp}) as dependent (outcome) variable.
+Variable \code{lfp} is a dummy variable, where a `1' represents
+labour force participation and a `0' represents no labour force participation.
+We regress this variable
+on a dummy variable for the presence of children in the household (\code{kids}),
+the woman's age in years (\code{age}), and her years of education (\code{educ}):
+\begin{equation}
+\Pr( \mathtt{lfp} = 1 | \mathtt{kids}, \mathtt{age}, \mathtt{educ} )
+  = f( \mathtt{kids}, \mathtt{age}, \mathtt{educ} )
+\label{eq:esti}
+\end{equation}
+Variable \code{age} is our primary variable of interest
+and we use it either as a continuous covariate
+or as an interval-coded covariate with four intervals:
+30--37, 38--44, 45--62, and 63--70~years.
+
+To demonstrate how to apply our methods
+to regression models where the dependent variable has more than two categories,
+e.g., ordered probit models and multinomial logistic regressions,
+and to test approximations of standard errors from estimates derived from
+these regressions models,
+we create an additional variable for labour force participation
+that has three categories: `no labour force participation' (0~working hours),
+`part-time labour force participation' (1--1,300~working hours),
+and `full-time labour force participation' (>1,300~working hours).
+
+We estimate equation~(\ref{eq:esti}) with the estimation methods
+discussed in this article.
+The regression results provide the variance-covariance matrices
+of the estimated coefficients
+so that we can apply the Delta method \cite{Greene2011}
+to calculate approximate standard errors of the calculated
+effect size measures.
+We use these standard errors as benchmarks
+to assess the quality of various approximations for cases
+where all off-diagonal elements of the variance-covariance matrix are unknown,
+which is the case for most studies published in the literature,
+as usually only the standard errors (or t-values) of the estimates are reported.
+
+%================================= Estimation Methods =====================================
+
+\section{Estimation methods}
+\label{sec:method}
+
+Most estimation methods that can handle binary or categorical
+dependent variables can be categorised
+into two groups: methods where the link function follows a normal distribution,
+so-called probit regressions, and methods where the link function follows a
+logistic distribution, logistic regressions.%
+\footnote{There exists a multitude of estimation techniques for models with
+categorical dependent variables, quasi-categorical dependent variables,
+like count data, or outcome variables that can be transferred into a binary
+or categorical variables, like truncated variables.
+We consider these regression models to be outside the scope of this article.}
+Another approach that has regained popularity in recent years
+because it is based on fewer assumptions than other approaches
+is the linear probability model,
+which uses a simple linear link function,
+and, thus, can be estimated by ordinary least squares (OLS)
+and other estimators for linear regression models.
+
+The linear probability model assumes that a Bernoulli trial can be explained
+by a linear combination of covariates:
+\begin{equation}
+\Pr( Y = 1 | X = x ) = \beta_0 + \sum_{j=1}^K \beta_j x_j,
+\label{eq:lpm}
+\end{equation}
+where $Y \in \{ 0, 1 \}$ is a binary dependent variable,
+$x = ( x_1, \ldots , x_K )^{\top}$ is a vector
+of $K$ covariates, and
+$\beta = ( \beta_0 , \ldots , \beta_K )^{\top}$ is a vector of $K + 1$
+unknown coefficients.
+
+A probit regression model \cite{Bliss1934, Fisher1935}
+models the same relationship assuming a probit link function
+which follows a standard normal distribution:
+\begin{equation}
+\Pr( Y = 1 | X = x ) = \Phi\left( \beta_0 + \sum_{j=1}^K \beta_j x_j \right) ,
+\label{eq:probit}
+\end{equation}
+where $\Phi(\cdot)$ is the cumulative distribution function of the standard normal distribution.
+
+The logistic regression \cite{Cox1958} uses a logit link function:
+\begin{equation}
+\Pr( Y = 1 | X = x ) = \frac{ \exp \left( \beta_0 + \sum_{k=1}^K \beta_k x_k \right)}
+                        { 1 + \exp \left( \beta_0 + \sum_{k=1}^K \beta_k x_k \right)},
+\label{eq:logit}
+\end{equation}
+
+A bivariate or multivariate probit model generalises the probit regression model~(\ref{eq:probit})
+to simultaneously estimate two or more probit equations for different binary dependent variables
+$Y_1 , \ldots , Y_N$,
+where a potential correlation between the error terms of the different probit equations
+is explicitly modelled.
+As meta-analyses usually focus on one specific dependent variable,
+the coefficients of the regression equations for the other dependent variables and
+the correlation structure of the error terms in the multivariate probit regression model
+can be ignored.
+Hence, the estimation result for the one probit equation of interest
+can be treated like an estimation result from a univariate probit regression,
+so that equation~(\ref{eq:probit}) can be used to calculate
+the \textit{unconditional} probabilities
+$P( Y_n = 1 | x_1 , \ldots , x_K )$
+and the marginal effects on the \textit{unconditional} probabilities
+in bivariate and multivariate probit regression models \cite{Sodjinou2012}.%
+\footnote{%
+We do not take into account the conditional probabilities
+$P( Y_n = 1 | x_1, \ldots, x_K,\allowbreak Y_1, \ldots, Y_{n-1},\allowbreak Y_{n+1}, \ldots, Y_P)$
+and the marginal effects on the conditional probabilities,
+because we focus on one dependent variable
+and disregard interrelations between different dependent variables.
+}
+
+If a study reports the marginal effects based on the regression results
+of a probit model, a logistic regression, or a multivariate probit model,
+one can assume a first-order Taylor series approximation of these models
+around the point, at which the marginal effects were calculated.
+Under this linear approximation, the marginal effects can be treated
+as if they were coefficients of a linear probability model~(\ref{eq:lpm}).
+
+Many extensions of probit and logistic regression models have been developed to accommodate for
+more complicated data structures.
+For instance, regression methods for dependent variables with more than two categories
+estimate the probability
+that the dependent variable is equal to a certain category.
+Studies with this set-up can still be compared to studies with a binary dependent variable
+if the categories can be grouped into two groups
+that correspond to the two outcomes of the binary dependent variable
+in the other studies.
+
+A modification of the probit regression that handles ordered categorical variables,
+i.e., categorical variables where the ordering of the categories is meaningful
+(think of first place, second and third place),
+is the ordered probit regression \cite{Aitchison1957},
+where the dependent variable can have $P$~distinct and strictly ordered values
+($Y \in \{ 1, \ldots , P \}$),
+can be specified as:
+\begin{align}
+\Pr( Y = p | X = x )
+= \; & \Phi\left( \mu_p - \sum_{j = 1}^K \beta_j x_j \right)
+  - \Phi\left( \mu_{p - 1} - \sum_{j = 1}^K \beta_j x_j \right)
+  \label{eq:oprobit} \\
+& \forall \; p = 1, \ldots, P, \nonumber
+\end{align}
+where $\mu_0 < \mu_1 < \ldots < \mu_P$ are the break points,
+of which $\mu_0 = - \infty$, $\mu_P = \infty$,
+and $\mu_1 , \ldots , \mu_{P-1}$ are unknown and, thus, need to be estimated.
+%
+To make estimates from an ordered probit model comparable to
+estimates from models with a binary dependent variable,
+we create a new binary dependent variable~$Y^*$
+by dividing the $P$~distinct values of the dependent variable~$Y$
+into two categories:
+\begin{equation}
+Y^* =
+\begin{cases}
+0 & \text{ if } Y \in \{ 1, \ldots , p^* - 1 \} \\
+1 & \text{ if } Y \in \{ p^* , \ldots , P \}
+\end{cases}
+\end{equation}
+with $p^* \in \{ 2, \ldots, P \}$.
+This reduces the ordered probit model to a binary probit model:%
+\footnote{%
+A proof is given in Appendix Section~\ref{sec:derivBinProbitOrderedProbit}.
+}
+\begin{align}
+\Pr( Y^* = 1 | X = x )
+& = \Pr( Y \in \{ p^*, \ldots , P \} | X = x ) \label{eq:prob1} \\
+& = \Phi\left( - \mu_{p^* - 1} + \sum_{j = 1}^K \beta_j x_j \right) \label{eq:probn},
+\end{align}
+where the intercept of the binary probit model~(\ref{eq:probit})
+is equal to the negative value of the break point
+that separates $Y^* = 0$ from $Y^* = 1$,
+i.e., $\beta_0 = -\mu_{p^* - 1}$.%
+\footnote{%
+If the ordered probit model~(\ref{eq:oprobit})
+is estimated with intercept, say, $\beta_0^*$ and
+(for identification) by normalising the first (internal) break point to zero,
+i.e., $\mu_1 = 0$,
+the ordered probit model can be simplified to a binary probit model
+with intercept $\beta_0 = \beta_0^* - \mu_{p^* - 1}$.
+}
+
+The multinomial logistic regression \cite{Luce1959} handles estimation models with
+multinomial dependent variables, i.e., categorical variables where the ordering
+of the categories has no meaning (think of red cars, green, cars, and blue cars):
+\begin{align}
+\Pr( Y = p | X = x ) & \equiv \pi_p\\
+& = \frac{ \exp \left( \beta_{0,p} + \sum_{k=1}^K \beta_{k,p} x_k \right) }
+  { 1 + \sum_{o \in \{1, \ldots, P \} \setminus p^* }
+    \exp \left( \beta_{0,o} + \sum_{k=1}^K \beta_{k,o} x_k \right) } \\[1ex]
+& = \frac{ \exp \left( \beta_{0,p} + \sum_{k=1}^K \beta_{k,p} x_k \right) }
+  { \sum_{o=1}^P
+    \exp \left( \beta_{0,o} + \sum_{k=1}^K \beta_{k,o} x_k \right) } \\[1ex]
+&  \hspace{2cm} \forall \, p = 1, \ldots, P, \nonumber
+\label{eq:MNLogit}
+\end{align}
+where $Y \in \{1, \ldots, P \}$ is a categorical dependent variable
+with reference category~$p^*$,
+$\beta_{\cdot,p} = ( \beta_{0, p}, \ldots, \beta_{K, p} )^{\top}$;
+$p \in \{1, \ldots, P \} \setminus p^*$
+are $P-1$ vectors of $K + 1$ unknown coefficients each,
+and $\beta_{j,p^*} \equiv 0 \; \forall \; j = 0, \ldots, K$
+are the $K+1$ coefficients of the reference category~$p^*$,
+which are all normalized to zero.
+
+
+%=============================== Continuous Covariates ===================================
+
+\section{Semi-elasticities of continuous covariates}
+\label{sec:semela}
+\subsection{Semi-elasticities}
+
+Differences in the units of measurement of the variables of interest often
+render it impossible to directly compare coefficient estimates from
+different studies.
+In many cases,
+this problem can be circumvented by calculating the elasticity of the effect,
+$\epsilon_k = \partial \ln( Y ) / \partial \ln( x_k )
+= ( \partial Y / \partial x_k ) \cdot ( x_k / Y )$,
+e.g., calculated at the sample mean $x_k = \bar{x}_k$
+and $Y = \bar{Y}$ (e.g., see \cite{Greene2010}).
+The elasticity describes the percentage change in the dependent variable~$Y$
+given a one percent increase in the continuous covariate~$x_k$.
+It is as such unit-free,
+which allows the user to compare the effect of a particular covariate across different studies.
+
+In the case of studies with binary dependent variables,
+the regression model describes the probability
+that the dependent variable has a value of one.
+As the probability is already coded between zero and one and unit-free,
+we suggest to calculate a semi-elasticity of each continuous
+covariate of interest:
+\begin{equation}
+\epsilon_k \equiv \frac{\partial \Pr( Y = 1 | X = x )}{\partial x_k } \cdot x_k ,
+\label{eq:semiEl}
+\end{equation}
+which can be interpreted as the percentage point change in the probability of $Y$
+being equal to one given a one percent increase in~$x_k$.
+
+Table~\ref{tab:semiE} presents the equations for calculating the semi-elasticities
+of continuous covariates for all six estimation methods covered in this article.
+If the covariate of interest enters the estimation
+equation both as linear term and as quadratic term,
+the equations for calculating the semi-elasticities
+must be extended accordingly.
+These extensions for quadratic terms are included in the equations
+in Table~\ref{tab:semiE}.
+
+\newcommand{\noteMLogitP}{%
+For multinomial logistic regression models,
+$\mathcal{P}$ indicates the set of categories of the dependent variable
+that correspond to a binary outcome of one,
+while all categories that are not in $\mathcal{P}$
+correspond to a binary outcome of zero.
+}
+\begin{sidewaystable}[!h]
+\caption{Semi-elasticities of continuous covariates for 6~different regression models}
+\label{tab:semiE}
+\begin{tabular}{ p{5cm} p{15cm} }
+   \\[-1.8ex]\hline
+   \hline \\[-1.8ex]
+   Regression model & Semi-elasticity \\
+   \midrule \\[-1.8ex]
+   Linear probability model &
+   \begin{equation*}
+   \epsilon_k = \left( \beta_k + 2 \, \beta_{k+1} x_k \right) x_k
+   \end{equation*} \\
+   Binary, bivariate / multivariate, and ordered probit regression &
+   \begin{equation*}
+   \epsilon_k =
+      \phi \left( \beta_0 + \sum_{j = 1}^K \beta_j x_j \right)
+      \left( \beta_k + 2 \, \beta_{k+1} x_k \right) x_k
+   \end{equation*}\\
+   Logistic regression &
+   \begin{equation*}
+   \epsilon_k =
+      \dfrac{ \exp{( \beta_0 + \sum_{j=1}^K \beta_j x_j )}}
+         {( 1 + \exp{( \beta_0 + \sum_{j=1}^K \beta_j x_j )})^2 }
+      \left( \beta_k + 2 \, \beta_{k+1} x_k \right) x_k
+   \end{equation*}\\
+   Multinomial logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+   \epsilon_{k,\mathcal{P}}
+      = \; & \sum_{p \in \mathcal{P}} \epsilon_{k,p}^*\\
+   \text{with } \epsilon_{k,p}^*
+      = \; & \pi_p \left(
+         \beta_{k,p} + 2 \, \beta_{k+1,p} x_k
+         - \sum_{o=1}^P
+            \left( \beta_{k,o} + 2 \, \beta_{k+1,o} x_k \right)
+               \pi_o  \right) x_k \\
+   & \forall \; p = 1, \ldots, P
+   \end{aligned}
+   \end{equation*} \\[1em]
+   \bottomrule
+\end{tabular}\\[1ex]
+Note:
+$\phi(\cdot)$ denotes the probability density function
+of the standard normal distribution.
+If the regression analysis includes a quadratic term
+of the covariate of interest,
+we assume that the model is specified with $x_{k+1} \equiv x_k^2$
+so that $\beta_{k+1}$ and $\beta_{k+1,j}; j = 1, \ldots, P$ indicate
+the coefficient(s) of the quadratic term of the covariate of interest.
+If the regression analysis does not include a quadratic term
+of the covariate of interest,
+the equations in this table can be simplified
+by setting all $\beta_{k+1}$ and all $\beta_{k+1,j}; j = 1, \ldots, P$
+to zero.
+\noteMLogitP
+\end{sidewaystable}
+
+As described in Section~\ref{sec:method},
+certain estimates from bivariate, multivariate, and ordered probit regressions
+can be extracted
+so that parts of these models correspond to binary probit models
+and the equation for calculating semi-elasticities of binary probit models
+can be also applied to bivariate, multivariate, and ordered probit models.
+
+We have implemented the calculation of semi-elasticities
+for all six estimation methods covered in this article
+in the \R{} package \pkg{urbin}.
+In order to demonstrate how to use this package,
+we calculate the semi-elasticity of the variable \code{age} with regard to
+a married woman's probability to participate in the labour force
+based on a probit regression~(\ref{eq:probit}) of equation~(\ref{eq:esti}).%
+\footnote{%
+The \R{} code for estimating these models
+is available in Appendix Section~\ref{sec:RCodeEstProbit}.
+}
+<<estProbit, echo=FALSE, results='hide' >>=
+estProbit <- glm( lfp ~ kids + age + educ,
+  family = binomial(link = "probit"), data = Mroz87 )
+xMean <- c( 1, colMeans( Mroz87[ , c( "kids", "age", "educ" ) ] ) )
+
+estProbitQ <- glm( lfp ~ kids + age + I(age^2) + educ,
+  family = binomial(link = "probit"), data = Mroz87 )
+xMeanQ <- c( xMean[ 1:3], xMean[3]^2, xMean[4] )
+@
+<<tabEstProbit, echo=FALSE, results='asis' >>=
+stargazer( estProbit, estProbitQ,
+  title = "Probit regression results with age as linear and quadratic covariate",
+  label = "tab:probitSum", header = FALSE,
+  digits = 2, intercept.bottom = FALSE )
+@
+The results of the probit regression are presented in Table~\ref{tab:probitSum},
+which in combination with Table~\ref{tab:descStats} represents the standard
+information that a user usually can obtain from most publications.
+
+In the following command,
+function \code{urbinEla} calculates the semi-elasticity of variable \code{age}:
+<< echo=FALSE, results='hide' >>=
+library( "urbin" )
+@
+<<>>=
+urbinEla( coef(estProbit), xMean, xPos = 3, model = "probit" )
+@
+This is done based on the vector of coefficients (including intercept)
+of the probit regression, \code{coef(estProbit)},
+and the vector of sample means for all covariates
+(including a one for the intercept), \code{xMean}.
+Argument \code{xPos} indicates the position of the covariate(s) of interest,
+in our example \code{age},
+in the vectors \code{coef(estProbit)} and \code{xMean}.
+Argument \code{model} is set to \code{"probit"}, because the coefficients are
+obtained from a probit regression and, thus, the semi-elasticity of
+variable \code{age} has to be calculated based on equation~(\ref{eq:probit}).
+The calculated semi-elasticity indicates
+that the probability that a woman is in the labour force decreases,
+\textit{ceteris paribus}, by
+\Sexpr{-round(urbinEla( coef(estProbit), xMean, xPos = 3, model = "probit" )$semEla, 2 )}%
+~percentage points if her age increases by one percent.
+
+If variable \code{age} also enters the regression equation in quadratic form,
+we can simply use argument \code{xPos} to point out the positions
+of both \code{age} and \code{age}$^2$
+in vectors \code{coef(estProbitQ)} and \code{xMeanQ}:
+<<>>=
+urbinEla( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  model = "probit" )
+@
+If argument \code{xPos} has two elements,
+function \code{urbinEla} automatically uses the extended
+formula to accommodate the quadratic term in the calculation of the
+semi-elasticity.
+The semi-elasticity
+based on the probit model with both a linear and a quadratic term of \code{age}
+indicates
+that the probability that a woman is in the labour force decreases,
+\textit{ceteris paribus}, by
+\Sexpr{-round(urbinEla( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ), model = "probit" )$semEla, 2 )}%
+~percentage points if her age increases by one percent.
+
+\subsection{Approximation of standard errors}
+\label{sec:semElaSE}
+
+An approximate standard error of the semi-elasticity
+defined in equation~(\ref{eq:semiEl})
+can be obtained by using the Delta method \cite{Greene2011}:
+\begin{equation}
+\se( \epsilon_k )
+  = \sqrt{
+  \frac{ \partial \epsilon_k }{ \partial \bm{\beta} }
+    \var( \bm{\beta} )
+  \frac{ \partial \epsilon_k }{ \partial \bm{\beta}^{\top} } },
+\label{eq:DeltaMethod}
+\end{equation}
+where $\se( \epsilon_k )$ indicates
+the (approximate) standard error of the semi-elasticity $\epsilon_k$,
+$\partial \epsilon_k / \partial \bm{\beta}$
+indicates the gradient vector of the semi-elasticity $\epsilon_k$
+with respect to the coefficients $\beta_0, \ldots, \beta_K$,
+and $\var( \bm{\beta} )$ indicates
+the variance-covariance matrix of the estimated coefficients.
+The gradient vectors for the semi-elasticities,
+$\partial \epsilon_k / \partial \bm{\beta}$,
+of the various regression models
+are presented in Appendix Section~\ref{sec:gradSemEla}.
+
+The following commands calculate the same semi-elasticities as above,
+but this time include their respective standard errors
+based on the full variance-covariances matrices of the estimates:
+<<>>=
+urbinEla( coef(estProbit), xMean, xPos = 3, model = "probit",
+  allCoefVcov = vcov(estProbit)  )
+urbinEla( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  model = "probit", allCoefVcov = vcov(estProbitQ) )
+@
+
+As scientific publications usually do not report covariances
+between estimated coefficients,
+but only (at best) standard errors
+(or t-values, which can be used to calculate the standard errors),
+the covariances between the estimates of the coefficient
+are usually unknown.
+A simple solution would be to replace the unknown covariances by zeros.
+However, in many empirical examples and a few Monte-Carlo trials,
+we noticed that ignoring the covariances between the coefficients
+often gives very imprecise, mostly upward-biased, standard errors
+of the semi-elasticities,
+particularly if the models include a quadratic term of the covariate of interest:
+<<>>=
+urbinEla( coef(estProbit), xMean, xPos = 3, model = "probit",
+  allCoefVcov = sqrt(diag(vcov(estProbit))),
+  seSimplify = FALSE  )
+urbinEla( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  model = "probit", allCoefVcov = sqrt(diag(vcov(estProbitQ))),
+  seSimplify = FALSE )
+@
+
+In these empirical examples and Monte Carlo trials,
+we found that when covariances are assumed to be zero,
+simplifying the calculations of the gradients
+$\partial \epsilon_k / \partial \bm{\beta}$
+by assuming that the `weighting factors' in the equations
+for calculating the semi-elasticities%
+\footnote{I.e., $\phi(\cdot)$ for different types of probit models,
+$\exp(\cdot)/(1+\exp(\cdot))^2$ for logistic regression models, and
+$\pi_p$ and $\pi_o$ for multinomial logistic regression models,
+see Table~\ref{tab:semiE}.}
+do not depend on the coefficients (although they actually do),
+gives much better approximations of the standard error
+than using the correctly calculated gradients.
+These simplified gradient vectors are presented
+in Appendix Section~\ref{sec:gradSemElaSimple}.
+As several elements of these simplified gradient vectors are zero,
+the calculation of the semi-elasticities with the Delta method
+ignores many of the unknown covariances
+so that a lack of covariances causes a smaller problem
+when using the simplified gradients than when using the full gradients.
+
+The huge overestimation of the standard errors of the semi-elasticities
+in the presence of a quadratic term of the covariate of interest
+originates from the multicollinearity between the quadratic term,
+the linear term, and the intercept.
+In an OLS regression, e.g., a linear probability model,
+with an intercept and a linear and quadratic term of a covariate,
+the variance-covariance matrix of the estimates
+would be equal to $\sigma^2 ( X^{\top} X )^{-1}$,
+where $\sigma^2$ is the variance of the error term
+and $X$ is an $N \times 3$ matrix with $N$ the number of observations
+and its three columns being the intercept and the linear and quadratic term
+of the covariate, respectively.
+If we have the values of the covariate,
+we can calculate the elements~$w_{ij}; i,j \in \{1,2,3\}$
+of the $3 \times 3$ matrix $W \equiv ( X^{\top} X )^{-1}$.
+If we additionally have the standard errors of the coefficients
+of the linear and quadratic terms of the covariate,
+i.e., $\se(\beta_1)$ and $\se(\beta_2)$, respectively,
+we can calculate the variance of the error term
+as $\sigma^2 = \se(\beta_1)^2 / w_{22}$
+or as $\sigma^2 = \se(\beta_2)^2 / w_{33}$
+and then the covariance between the two coefficients of the covariate
+as $\cov(\beta_1, \beta_2) = \sigma^2 w_{23} = \sigma^2 w_{32}$.
+As one usually does not have the original data that were used in published studies,
+but rather the mean value and corresponding standard deviation of the covariate of interest,
+one can simulate the values of the covariate, e.g.,
+with a pseudo-random number generator sampling from a normal distribution
+using the actual mean and standard deviation of the covariate.
+In cases where the covariate is simulated,
+the actual model includes further covariates, or
+the actual model is not an OLS model (but, e.g., a probit or logit regression),
+the two above-described equations for calculating the variance of the error term
+give two different values.
+In these cases, one can calculate the approximate error variance
+as a geometric mean:
+$\sigma^2 \approx \sqrt{ \left( \se(\beta_1)^2 / w_{22} \right)
+ \left( \se(\beta_2)^2 / w_{33} \right) }$,
+which is a more conservative measure than the arithmetic mean.
+
+
+If a user of the \code{urbinEla} function provides standard errors
+of the coefficients (rather than the full covariance matrix),
+it uses the simplified gradients to calculate the standard errors
+unless the user sets argument \code{seSimplify} to \code{FALSE}.
+Moreover, if the model includes a quadratic term
+of the covariate of interest
+and the user provides the mean value and the standard deviation
+of the covariate of interest through argument \code{xMeanSd},
+\code{urbinEla} uses a pseudo random number generator
+to draw 1,000 values from a normal distribution
+with the provided mean value and standard deviation of the covariate
+and then imputes the covariance between the coefficients
+of the linear and quadratic term of the covariate
+as described in the previous paragraph.
+
+The following command uses the simplified gradient
+and---for the probit regression with the quadratic term---%
+additionally an imputed value of the covariance between the coefficients
+of the linear and quadratic term of the \code{age} variable
+to calculate approximate standard errors of the semi-elasticities:
+<<>>=
+urbinEla( coef(estProbit), xMean, xPos = 3, model = "probit",
+  allCoefVcov = sqrt(diag(vcov(estProbit))) )
+urbinEla( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  model = "probit", allCoefVcov = sqrt(diag(vcov(estProbitQ))),
+  xMeanSd = c( mean(Mroz87$age), sd(Mroz87$age) ) )
+@
+These standard errors are \emph{much} closer to the
+standard errors based on the full variance-covariance matrices
+than the na\"ive calculations
+with the full gradients and replacing the missing covariances by zeros.
+
+
+%========================== Interval coded covariates ==============================
+
+\section{Semi-elasticities of interval-coded covariates}
+\label{sec:elaint}
+\subsection{Semi-elasticities}
+
+In meta-analyses where the user is interested in comparing the semi-elasticities
+of a certain continuous covariate across different studies,
+studies that code the covariate of interest in intervals cause a serious problem,
+as coefficients of interval-coded covariates cannot be compared to coefficients
+or semi-elasticities of continuous covariates.
+To overcome this problem, we suggest in this section a procedure to derive
+a semi-elasticity of an interval-coded covariate.
+
+A regression model with a binary dependent variable,
+where the $k$th covariate is interval-coded can be specified as:
+\begin{align}
+\Pr( Y = 1 | X = x ) &= g \left( \beta_0 +
+      \sum_{j \in \{ 1, \ldots, K \} \setminus k } \beta_j x_j +
+      \sum_{m \in \{ 1, \ldots, M \} \setminus m^* } \delta_m D_m  \right) , \\
+D_m & =
+\begin{cases}
+1 & \text{ if } b_{m-1} < x_k \leq b_m \\
+0 & \text{ otherwise}
+\end{cases}
+\quad \forall \; m = 1, \ldots , M,
+\end{align}
+where $g()$ is a generic link function that can take any form,
+$x = ( x_1, \ldots , x_K )^{\top}$ is a vector of $K$ continuous covariates,
+whereas the actual values of one of these covariates, $x_k$, are unobserved,
+$D = ( D_1 , \ldots , D_M )^{\top}$ is a vector of $M$~dummy variables
+that indicates in which intervals the values of covariate $x_k$ fall,
+$b = ( b_0 , \ldots , b_M )^{\top}$ is a vector of the $M + 1$
+boundaries of the $M$~intervals of covariate~$x_k$
+with $b_0 < b_1 < \ldots < b_{M-1} < b_M$,
+$m^* \in \{ 1 , \ldots , M \}$ is an arbitrary chosen interval
+that is used as `base' interval in the regression,
+and $\beta = ( \beta_0, \ldots, \beta_{k-1}, \beta_{k+1}, \ldots, \beta_K )^{\top}$ and
+$\delta = ( \delta_1, \ldots, \delta_{m^* - 1}, \delta_{m^* + 1} ,
+  \ldots, \delta_M )^{\top}$
+are vectors of $K$ and $M - 1$ unknown coefficients, respectively.
+For convenience of further calculations,
+we define the (non-estimated) coefficient for the `base' interval to be zero,
+i.e., $\delta_{m^*} = 0$.
+
+To derive the semi-elasticity of the `unknown' continuous $k$th covariate:
+\begin{equation}
+\epsilon_k \equiv \frac{\partial \Pr( Y = p | X = x )}{\partial x_k } \cdot x_k ,
+\end{equation}
+we calculate the effect of an increase of the $k$th covariate
+above each inner boundary to the next higher interval
+on the probability of $Y=1$, i.e.:
+\begin{align}
+e_{km} = \; &
+  \Pr( Y = 1 | b_m < x_k \leq b_{m+1} ) - \Pr( Y = 1 | b_{m-1} < x_k \leq b_m )\\
+  & \; \forall \; m = 1, \ldots, M-1
+  \nonumber
+\end{align}
+and the approximate proportions of observations
+at which the $k$th covariate will increase above an inner boundary
+if the $k$th covariate increases by one percent
+around each of these boundaries
+(i.e., the proportions of observations in the intervals
+$\pm 0.5$\% around each inner boundary
+assuming a uniform distribution of the values of the $k$th covariate
+within each interval):
+\begin{align}
+p_{km} \approx \; &
+  0.005 \cdot b_m \frac{s_m}{b_m - b_{m-1}} +
+  0.005 \cdot b_m \frac{s_{m+1}}{b_{m+1} - b_m}
+  \; \forall \; m = 1, \ldots, M-1,
+\end{align}
+where $s_m$ is the proportion of observations
+that are in the $m$th interval,
+i.e., $b_{m-1} < x_k \leq b_m$.
+Finally, we can calculate the approximate semi-elasticity by:
+\begin{align}
+\epsilon_k
+& \approx 100 \cdot \sum_{m=1}^{M-1} e_{km} \cdot p_{km} \\
+& \approx \sum_{m=1}^{M-1} \frac{e_{km} \cdot b_m}{2}
+  \left( \frac{s_m}{b_m - b_{m-1}} +
+    \frac{s_{m+1}}{b_{m+1} - b_m}
+  \right)\\
+& \approx \sum_{m=1}^{M-1} e_{km} w_m
+  \label{eq:linElaIntAvg}\\
+\text{with } w_m
+& \equiv \frac{b_m}{2}
+  \left( \frac{s_m}{b_m - b_{m-1}} +
+    \frac{s_{m+1}}{b_{m+1} - b_m}
+  \right) \; \forall \; m = 1, \ldots, M
+\end{align}
+so that this semi-elasticity can be interpreted
+in the same way as the semi-elasticity defined
+in Section~\ref{sec:semela},
+i.e., it indicates the approximate increase in the probability of $Y=1$
+(in percentage points)
+that is caused by a one percent increase of the covariate~$x_k$.
+
+Table~\ref{tab:semiInt} presents the equations for calculating the semi-elasticities
+of interval-coded covariates for all six estimation methods covered in this article.
+\begin{sidewaystable}[!h]
+ \caption{Semi-elasticities of interval-coded covariates
+    for 6~different regression models}
+ \label{tab:semiInt}
+ \begin{tabular}{ p{5cm} p{15cm} }
+  \\[-1.8ex]\hline
+   \hline \\[-1.8ex]
+   Regression model & Semi-elasticity \\
+   \midrule \\[-1.8ex]
+   Linear probability model &
+   \begin{equation*}
+   \epsilon_k
+      \approx \sum_{m=1}^{M-1} \;
+      \left( \delta_{m+1} - \delta_m \right) w_m
+   \end{equation*} \\
+   Binary, bivariate / multivariate, and ordered probit regression &
+   \begin{equation*}
+   \begin{aligned}
+   \epsilon_k
+   & \approx \sum_{m=1}^{M-1} \;
+      \left( \Phi_{m+1} (\cdot) - \Phi_m (\cdot) \right) w_m \\
+   \text{with } \Phi_m (\cdot)
+   & \equiv \Phi \left( \beta_0 +
+      \sum_{j\in\{1, \ldots, K \} \setminus k} \beta_j x_j +
+      \delta_m \right) \; \forall \; m = 1, \ldots, M
+   \end{aligned}
+   \end{equation*}\\
+   Logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+   \epsilon_k
+   & \approx \sum_{m=1}^{M-1}
+      \left( \frac{ \exp_{m+1} (\cdot) }{ 1 + \exp_{m+1}(\cdot) } -
+         \frac{ \exp_m (\cdot) }{ 1 + \exp_m (\cdot) } \right) w_m \\
+   \text{with } \exp_m (\cdot)
+   & \equiv \exp \left( \beta_0 +
+      \sum_{j \in \{1, \ldots, K \} \setminus k } \beta_j x_j +
+      \delta_m \right) \; \forall \; m = 1, \ldots, M
+   \end{aligned}
+   \end{equation*}\\
+   Multinomial logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+   \epsilon_{k,\mathcal{P}} \approx \;
+   & \sum_{p \in \mathcal{P}} \; \epsilon_{k,p}^*\\
+   \text{with } \epsilon_{k,p}^* \approx \;
+   & \sum_{m=1}^{M-1}
+      \left( \frac{ \exp_{m+1,p} (\cdot) }{
+         \sum_{o=1}^P \exp_{m+1,o} (\cdot) } -
+      \frac{ \exp_{m,p} (\cdot) }{
+         \sum_{o=1}^P \exp_{m,o} (\cdot) } \right) w_m
+         \; \forall \; p = 1, \ldots, P \\
+   \text{and } \exp_{m,p} (\cdot) \equiv \;
+   & \exp \left( \beta_{0,p} +
+         \sum_{j \in \{1, \ldots, K \} \setminus k} \beta_{j,p} x_j +
+         \delta_{m,p} \right)
+         \; \forall \; m = 1, \ldots, M; p = 1, \ldots, P
+   \end{aligned}
+   \end{equation*}\\[1em]
+    \bottomrule
+ \end{tabular}\\[1ex]
+Note:
+\noteMLogitP
+\end{sidewaystable}
+
+
+To demonstrate how to calculate the semi-elasticity of the interval-coded variable
+\code{age} with regard to a married woman's probability to participate in the labour force,
+we estimate equation~(\ref{eq:esti}) as a logistic regression
+with \code{age} as interval-coded covariate.
+We create four intervals,
+30--37, 38--44, 45--52, and 53--60~years,
+and we use the third interval (45--52~years) as `base' interval
+in the regression analysis.%
+\footnote{%
+The \R{} code for estimating this model
+is available in Appendix Section~\ref{sec:RCodeEstLogitInt}.
+}
+The results of this estimation are presented in Table~\ref{tab:logitInt}.
+<<estLogitInt, echo=FALSE, results='hide' >>=
+estLogitInt <- glm( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
+  family = binomial(link = "logit"), data = Mroz87 )
+xMeanInt <- c( xMean[1:2], mean( Mroz87$age30.37 ),
+  mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMean[4] )
+@
+<<tabEstLogitInt, echo=FALSE, results='asis' >>=
+stargazer( estLogitInt,
+  title = "Logistic regression results with age as interval-coded covariate",
+  label = "tab:logitInt", header = FALSE,
+  digits = 2, intercept.bottom = FALSE )
+@
+
+Using the vector of coefficient estimates
+that can be obtained from Table~\ref{tab:logitInt}
+(\code{coef(estLogitInt)}) and
+a vector with the sample means of the covariates \code{kids} and \code{educ}
+and the proportions of observations in the three age intervals included in the regression
+(\code{xMeantInt}),
+one can calculate the semi-elasticity of the covariate \code{age}
+using function \code{urbinElaInt}:
+<<>>=
+urbinElaInt( coef(estLogitInt), xMeanInt, xPos = c( 3, 4, 0, 5 ),
+  xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit" )
+@
+Argument \code{xPos} indicates the positions of the four age intervals
+(in ascending order)
+in the vectors \code{coef(estLogitInt)} and \code{xMeantInt},
+where a zero indicates the position of the reference interval
+that was not included in the regression
+and, thus, is not included in \code{coef(estLogitInt)} or \code{xMeantInt}.
+Argument \code{xBound} indicates the five boundaries of the four intervals.
+As the coefficients are derived from a logistic regression,
+we set argument \code{model} equal to \code{"logit"}.
+The semi-elasticity
+based on the logistic regression with \code{age} as interval-coded covariate
+indicates
+that the probability that a woman is in the labour force decreases,
+\textit{ceteris paribus}, by
+\Sexpr{-round(urbinElaInt( coef(estLogitInt), xMeanInt, xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit" )$semEla, 2 )}%
+~percentage points if her age increases by one percent.
+
+\subsection{Approximation of standard errors}
+
+An approximate standard error of the semi-elasticity
+of interval-coded covariates
+can, again, be obtained by using the Delta method
+(equation~\ref{eq:DeltaMethod}).
+The gradient vectors of the semi-elasticities
+with respect to the coefficients,
+$\partial \epsilon_k / \partial ( \bm{\beta}^{\top} \bm{\delta}^{\top} )^{\top}$,
+for the various regression models
+are presented in Appendix Section~\ref{sec:gradSemElaInt}.
+Argument \code{allCoefVcov} of function \code{urbinElaInt}
+can be used to specify the variance-covariance matrix:
+<<>>=
+urbinElaInt( coef(estLogitInt), xMeanInt, xPos = c( 3, 4, 0, 5 ),
+  xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit",
+  allCoefVcov = vcov(estLogitInt) )
+@
+
+As most studies do not report the variance-covariance matrix,
+we repeat the above calculation
+with providing only the standard errors
+so that \code{urbinElaInt} sets all covariances to zero:
+<<>>=
+urbinElaInt( coef(estLogitInt), xMeanInt, xPos = c( 3, 4, 0, 5 ),
+  xBound = c( 30, 37.5, 44.5, 52.5, 60 ), model = "logit",
+  allCoefVcov = sqrt(diag(vcov(estLogitInt))) )
+@
+In this empirical example---as in most of our other empirical tests---%
+setting the covariances to zero resulted in a slight overestimation
+of the standard error
+and we did not find a way to get better approximations
+than with just setting the covariances to zero.
+As setting the covariances to zero usually results
+only in a slight overestimation of the standard errors,
+we consider this approximation of the standard errors
+(which are often anyway only used as weighting factors)
+as generally suitable for meta-analyses.
+
+
+%========================== Effect continuous covariates ==============================
+
+\section{Effects of continuous covariates when they change between intervals}
+\label{sec:effcont}
+
+\subsection{Effect size}
+
+In this sections, we consider the case
+where the user wants to compare effects of an interval-coded covariate
+on the probability of $Y = 1$.
+We suggest a procedure that uses the results of studies
+that use the covariate of interest in its continuous form
+to calculate the effect of this covariate
+when it switches from one reference interval to another interval.
+
+We start out with a regression equation where the covariate of interest, $x_k$,
+is included as a linear term:
+\begin{equation}
+Pr( Y = 1 | X = x ) = g\left( \beta_0 + \sum_{k=1}^K \beta_k x_k \right)
+\end{equation}
+We suggest to derive the (approximate) effects of $x_k$ on $Y$,
+if this covariate changes between $M \geq 2$ discrete intervals,
+e.g., from a `reference' interval~$r$ to an interval of interest~$l$,
+by:
+\begin{align}
+E_{k,lr}
+= \; & \Pr( Y = 1 | b_{l-1} < x_k \leq b_l, x_{-k} )
+  \label{eq:linEffectStart} \\
+  & - \Pr( Y = 1 | b_{r-1} < x_k \leq b_r, x_{-k} )
+  \nonumber \\
+= \; & g \left( \beta_0 + \sum_{j \in \{ 1, \ldots, K \} \setminus k} \beta_j x_j
+     + \beta_k E[ x_k | b_{l-1} < x_k \leq b_l ] \right) \\
+  & - g \left( \beta_0 - \sum_{j \in \{ 1, \ldots, K \} \setminus k} \beta_j x_j
+       + \beta_k E[ x_k | b_{r-1} < x_k \leq b_r ] \right)
+  \nonumber \\[1ex]
+= \; & g \left( \beta_0 + \sum_{j \in \{ 1, \ldots, K \} \setminus k} \beta_j x_j
+     + \beta_k \bar{x}_{kl} \right) \label{eq:contEffect} \\
+  & - g \left( \beta_0 - \sum_{j \in \{ 1, \ldots, K \} \setminus k} \beta_j x_j
+       + \beta_k \bar{x}_{kr} \right), \nonumber
+\end{align}
+where $x_{-k} = ( x_1 , \ldots , x_{k-1} , x_{k+1} , x_K )^{\top}$
+is a vector of all covariates except for~$x_k$,
+$b_0 < b_1 < \ldots < b_{M-1} < b_M$ are the boundaries of the intervals of covariate~$x_k$,
+and
+\begin{equation}
+\bar{x}_{km} \equiv E[ x_k | b_{m-1} < x_k \leq b_m ]
+\; \forall \; m = 1, \ldots , M
+\end{equation}
+are the expected values of covariate~$x_k$ within specific intervals.
+If the expected values of covariate~$x_k$ for specific intervals are unknown,
+it may be appropriate
+to approximate them by the mid-points of the respective interval boundaries
+(e.g., if the covariate~$x_k$ has approximately a uniform distribution
+between the respective interval boundaries):
+\begin{equation}
+\bar{x}_{km} \approx \frac{ b_{m-1} + b_m }{2} \; \forall \; m = 1, \ldots , M.
+\label{eq:linEffectXBar}
+\end{equation}
+
+If the model specification additionally includes a quadratic term
+of the covariate~$k$,
+e.g., $x_{k+1} = x_k^2$,
+equations~(\ref{eq:linEffectStart}) to~(\ref{eq:contEffect}) change to:
+\begin{align}
+E_{k,lr}
+= \; & \Pr( Y = 1 | b_{l-1} < x_k \leq b_l, x_{-k,k+1} )\\
+  & - \Pr( Y = 1 | b_{r-1} < x_k \leq b_r, x_{-k,k+1} )
+  \nonumber \\
+= \; & g \bigg( \beta_0
+  + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j \\
+  & + \beta_k E[ x_k | b_{l-1} < x_k \leq b_l ]
+  + \beta_{k+1} E[ x_k^2 | b_{l-1} < x_k \leq b_l ] \bigg) \nonumber \\
+  & - g \bigg( \beta_0
+    + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+    \nonumber \\
+  & + \beta_k E[ x_k | b_{r-1} < x_k \leq b_r ]
+    + \beta_{k+1} E[ x_k^2 | b_{r-1} < x_k \leq b_r ] \bigg)
+  \nonumber \\[1ex]
+= \; & g \left( \beta_0
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \}} \beta_j x_j
+      + \beta_k \bar{x}_{kl} + \beta_{k+1} \overline{x^2_{kl}} \right) \\
+   & - g \left( \beta_0
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \}} \beta_j x_j
+      + \beta_k \bar{x}_{kr} + \beta_{k+1} \overline{x^2_{kr}} \right) , \nonumber
+\label{eq:quadEffect}
+\end{align}
+with
+\begin{equation}
+\overline{x^2_{km}} \equiv E[ x_k^2 | b_{m-1} < x_k \leq b_m ]
+\; \forall \; m = 1, \ldots , M.
+\end{equation}
+If $E[ x_k^2 | b_{m-1} < x_k \leq b_m ]$ is unknown,
+it may be appropriate to approximate it by assuming
+that covariate~$x_k$ has approximately a uniform distribution
+between each pair of subsequent interval boundaries
+so that its probability density function
+between boundaries $b_{m-1}$ and $b_m$
+is $1 / ( b_m - b_{m-1} )$:
+\begin{align}
+\overline{x^2_{km}}
+& \approx \int_{b_{m-1}}^{b_m} x_k^2 \; \frac{1}{b_m - b_{m-1}} \; d \, x_k\\
+& = \left. \frac{1}{3} \; x_k^3 \; \frac{1}{b_m - b_{m-1}}
+  \right|_{b_{m-1}}^{b_m} \\
+& = \frac{1}{3} \; b_m^3 \; \frac{1}{b_m - b_{m-1}}
+  - \frac{1}{3} \; b_{m-1}^3 \; \frac{1}{b_m - b_{m-1}} \\
+& = \frac{ b_m^3 - b_{m-1}^3 }{ 3 \left( b_m - b_{m-1} \right)}
+    \; \forall \; m = 1, \ldots, M.
+\label{eq:linEffectXSquaredBar}
+\end{align}
+
+Table~\ref{tab:effCont} presents the equations for calculating the effect sizes
+of continuous covariates when they change between intervals
+for all six estimation methods covered in this article.
+\begin{sidewaystable}[!h]
+ \caption{Effects of continuous covariates when they change between intervals
+    for 6~different regression models}
+ \label{tab:effCont}
+ \begin{tabular}{ p{5cm}  p{15cm} }
+  \\[-1.8ex]\hline
+   \hline \\[-1.8ex]
+   Regression model & Effect size \\
+   \midrule \\[-1.8ex]
+   Linear probability model &
+   \begin{equation*}
+      E_{k,lr} \approx
+         \beta_k \left( \bar{x}_{kl} - \bar{x}_{kr} \right)
+         + \beta_{k+1} \left( \overline{x^2_{kl}} - \overline{x^2_{kr}} \right)
+         \label{eq:semELPM}
+   \end{equation*} \\
+   Binary, bivariate / multivariate, and ordered probit regression &
+   \begin{equation*}
+   \begin{aligned}
+      E_{k,lr} \approx \;
+         & \Phi\left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kl} + \beta_{k+1} \overline{x^2_{kl}} \right)\\
+         & - \Phi\left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kr} + \beta_{k+1} \overline{x^2_{kr}} \right)
+   \end{aligned}
+   \end{equation*}\\
+   Logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+      E_{k,lr} \approx \;
+         & \frac{ \exp \left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kl} + \beta_{k+1} \overline{x^2_{kl}} \right)}
+         { 1 + \exp \left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kl} + \beta_{k+1} \overline{x^2_{kl}} \right)}\\
+         & - \frac{ \exp \left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kr} + \beta_{k+1} \overline{x^2_{kr}} \right)}
+         { 1 + \exp \left( \beta_0
+            + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_j x_j
+            + \beta_k \bar{x}_{kr} + \beta_{k+1} \overline{x^2_{kr}} \right)}
+   \end{aligned}
+   \end{equation*}\\
+   Multinomial logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+   E_{k,lr,\mathcal{P}} \approx \;
+      & \sum_{p \in \mathcal{P}} E_{k, lr, p}^*\\
+   \text{with } E_{k, lr, p}^* \equiv \;
+   & \frac{ \exp \left( \beta_{0,p}
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,p} x_j
+      + \beta_{k,p} \bar{x}_{kl} + \beta_{k+1,p} \overline{x^2_{kl}} \right)}
+   { \sum_{o=1}^P
+      \exp \left( \beta_{0,o}
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,o} x_j
+      + \beta_{k,o} \bar{x}_{kl} + \beta_{k+1,o} \overline{x^2_{kl}} \right)} \\
+   & - \frac{ \exp \left( \beta_{0,p}
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,p} x_j
+      + \beta_{k,p} \bar{x}_{kr} + \beta_{k+1,p} \overline{x^2_{kr}} \right)}
+   { \sum_{o=1}^P
+      \exp \left( \beta_{0,o}
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,o} x_j
+      + \beta_{k,o} \bar{x}_{kr} + \beta_{k+1,o} \overline{x^2_{kr}} \right)}
+   \end{aligned}
+   \end{equation*} \\[1em]
+   \bottomrule
+\end{tabular}\\[1ex]
+Note:
+If the regression analysis
+does not include a quadratic term of the covariate of interest,
+$\beta_{k+1}$ is simply the coefficient of the covariate~$x_{k+1}$
+so that both $\overline{x^2_{kl}}$ and $\overline{x^2_{kr}}$
+in the above equations must be replaced by~$x_{k+1}$.
+\noteMLogitP
+\end{sidewaystable}
+
+The effect of a continuous covariate
+when it changes between intervals
+can be calculated with package \pkg{urbin}
+by using function \code{urbinEffInt}.
+In our example,
+we use the results of the probit regression model
+with variable \code{age} as a linear covariate
+as well as with \code{age} as a linear and a quadratic covariate
+that we already used as example in Section~\ref{sec:semela}
+with estimation results presented in Table~\ref{tab:probitSum}.
+Based on these estimation results,
+we calculate the effect of covariate \code{age}
+on the probability of women's participation in the labour force
+as if \code{age} was an interval-coded covariate
+and changes from the 30--44~years (reference) interval
+to the 53--60~years interval.
+We do this both for the model with \code{age} as linear covariate:
+<<>>=
+urbinEffInt( coef(estProbit), xMean, xPos = 3,
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit" )
+@
+and for the model with \code{age} as a linear and quadratic covariate:
+<<>>=
+urbinEffInt( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit" )
+@
+The results based on the two estimated models indicate
+that the probability that a woman is in the labour force
+is, \textit{ceteris paribus},
+\Sexpr{round(-100*urbinEffInt( coef(estProbit), xMean, xPos = 3, refBound = c( 30, 44 ), intBound = c( 53, 60 ), model = "probit" )$effect)}%
+~percentage points or
+\Sexpr{round(-100*urbinEffInt( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ), refBound = c( 30, 44 ), intBound = c( 53, 60 ), model = "probit" )$effect)}%
+~percentage points, respectively, lower for women aged 53--60~years
+than for women aged 30--44~years.
+
+\subsection{Approximation of standard errors}
+
+As for the semi-elasticities,
+an approximate standard error of the effect
+of interval-coded covariates
+can be obtained by using the Delta method
+(equation~\ref{eq:DeltaMethod}).
+Appendix Section~\ref{sec:gradEffectInt} presents
+the gradient vectors of the effects
+with respect to the coefficients,
+$\partial E_{k,lr} / \partial \bm{\beta}$,
+for the various regression models.
+Argument \code{allCoefVcov} of function \code{urbinEffInt}
+can be used to specify the variance-covariance matrix:
+<<>>=
+urbinEffInt( coef(estProbit), xMean, xPos = 3,
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit", allCoefVcov = vcov(estProbit) )
+urbinEffInt( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit", allCoefVcov = vcov(estProbitQ) )
+@
+
+Given that most studies only report standard errors
+rather than the (full) variance-covariance matrix,
+we repeat the above calculations
+with providing only the standard errors
+so that \code{urbinEffInt} sets all covariances to zero:
+<<>>=
+urbinEffInt( coef(estProbit), xMean, xPos = 3,
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit", allCoefVcov = sqrt(diag(vcov(estProbit))) )
+urbinEffInt( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit", allCoefVcov = sqrt(diag(vcov(estProbitQ))) )
+@
+
+While replacing the (frequently unknown) covariances by zeros
+usually has only a minor effect on the standard error
+when the model has only a linear term of the covariate of interest,
+% (and this has no effect at all in case of a linear probability model
+% as can be seen from the results above),
+the standard errors based on models
+with linear and quadratic terms of the covariate of interest
+are usually largely upward-biased
+if the covariances are all set to zeros.
+However, approximating the covariance between the coefficient of the linear term
+and the coefficient of the quadratic term
+as explained in Section~\ref{sec:semElaSE}
+usually gives sufficiently precise approximations of the standard error.
+Function~\code{urbinEffInt} applies this procedure,
+if the user provides the mean value and the standard deviation
+of the covariate of interest through argument \code{xMeanSd}:
+<<>>=
+urbinEffInt( coef(estProbitQ), xMeanQ, xPos = c( 3, 4 ),
+  refBound = c( 30, 44 ), intBound = c( 53, 60 ),
+  model = "probit", allCoefVcov = sqrt(diag(vcov(estProbitQ))),
+  xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
+@
+
+
+\section{Grouping and re-basing effects of categorical and interval-coded covariates}
+\label{sec:lingroup}
+
+\subsection{Effect size}
+In cases where the user is interested in comparing effects of categorical
+or interval-coded covariates on a binary dependent variable,
+the user will frequently encounter studies,
+where the encoding of the covariate of interest
+differs between studies,
+e.g., the studies use different reference categories and/or
+different categorisations.%
+\footnote{%
+In order to simplify the notation,
+we use the term `categorical variables' throughout this section
+although all derivations in this section
+not only apply to (unordered or ordered) categorical variables
+but equally apply to interval-coded variables.
+}
+In this section, we suggest an approach to obtain comparable effect sizes
+by streamlining the categories
+and unifying the reference category.
+
+We consider a regression model:
+\begin{align}
+Pr( Y = 1 | X = x ) & = g\left( \beta_0 + \sum_{j \in \{ 1, \ldots , K \} \setminus k}
+  \beta_j x_j
+  + \sum_{m \in \{ 1, \ldots , M \} \setminus m^* } \delta_m D_m \right),\\
+D_m & =
+\begin{cases}
+1 & \text{ if } x_k \in c_m \\
+0 & \text{ otherwise}
+\end{cases}
+\quad \forall \; m = 1, \ldots , M,
+\end{align}
+where $g()$ is again a generic link function
+and the covariate of interest, $x_k$, is a categorical variable
+with $M$ mutually exclusive categories $c_1, \ldots, c_M$
+with $c_m \cap c_l = \emptyset \; \forall \; m \neq l$,
+category $c_{m^*}$ is used as reference category,
+and all other variables and coefficients are defined as above.
+For notational simplification of the following derivations,
+we define the (non-estimated) coefficient of the reference category to be zero,
+i.e., $\delta_{m^*} \equiv 0$.
+
+We want to obtain the effect of a change of covariate~$x_k$
+from a reference category~$c_r^*$
+to a category of interest~$c_l^*$:
+\begin{align}
+E_{k,lr}
+& = \Pr( Y = 1 | x_k \in c_l^* ) - \Pr( Y = 1 | x_k \in c_r^* ),
+\label{eq:effCat}
+\end{align}
+where categories~$c_r^*$ and/or~$c_l^*$
+may comprise multiple original categories $c_1, \ldots, c_M$.
+Vectors $v_r = ( v_{r1} , \ldots , v_{rM} )^{\top}$ and
+$v_l  = ( v_{l1} , \ldots , v_{lM} )^{\top}$
+indicate,
+which of the original categories $c_1, \ldots, c_M$
+are included in categories~$c_r^*$ and~$c_l^*$,
+respectively:
+\begin{align}
+v_{nm} & =
+\begin{cases}
+1 & \text{ if } c_m \in c_n^* \\
+0 & \text{ if } c_m \notin c_n^*
+\end{cases}
+\forall \; m = 1, \ldots, M ; n \in \{ r , l \}
+\end{align}
+
+In the following,
+we derive the effect of a change of covariate~$x_k$
+from a reference category~$c_r^*$
+to a category of interest~$c_l^*$,
+$E_{k,lr}$ as defined in equation~(\ref{eq:effCat}):
+\begin{align}
+E_{k,lr}
+= & \Pr( Y = 1 | x_k \in c_l^* ) - \Pr( Y = 1 | x_k \in c_r^* ) \\
+= & g\left( \beta_0
+  + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+  + \sum_{m=1}^M \delta_m E[ D_m | x_k \in c_l^* ] \right) \\
+& - g\left( \beta_0
+  + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+  + \sum_{m=1}^{M} \delta_m E[ D_m | x_k \in c_r^* ] \right)
+  \nonumber \\
+= & g \left( \beta_0
+  + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+  + \sum_{m=1}^M \delta_m D_{ml} \right) \\
+& - g \left( \beta_0
+  + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+  + \sum_{m=1}^{M} \delta_m D_{mr} \right)
+  \nonumber
+\end{align}
+with
+\begin{align}
+D_{mn} & \equiv E[ D_m | x_k \in c_n^* ] \\
+& = \frac{ P( D_m = 1 \cap x_k \in c_n^* ) }{ P( x_k \in c_n^* ) } \\
+& = \frac{ E[ D_m ] \; v_{nm}}{ P( x_k \in c_n^* ) } \\
+& = \frac{ s_m v_{nm} }{ \sum_{k=1}^M s_k v_{nk} }
+  \label{eq:linEffGrD}\\
+&   \qquad \forall \; m = 1, \ldots, M ; n \in \{ r , l \},
+  \nonumber
+\end{align}
+where $s_m = E[ D_m ] \; \forall \; m = 1, \ldots , M$
+is the share of observations
+with covariate~$x_k$ being in category~$c_m$.
+
+Table~\ref{tab:effGroup} presents the equations for
+grouping and re-basing effects of categorical and interval-coded covariates
+for all six estimation methods covered in this article.
+\begin{sidewaystable}[!h]
+ \caption{Grouping and re-basing effects of categorical and interval-coded covariates
+    for 6~different regression models}
+ \label{tab:effGroup}
+ \begin{tabular}{ p{5cm} p{15cm} }
+  \\[-1.8ex]\hline
+   \hline \\[-1.8ex]
+   Regression model & Effect size \\
+   \midrule \\[-1.8ex]
+   Linear probability model &
+   \begin{equation*}
+      E_{k,lr}
+               = \sum_{m=1}^{M} \delta_m \left( D_{ml} - D_{mr} \right)
+   \end{equation*} \\
+   Binary, bivariate / multivariate, and ordered probit regression &
+   \begin{equation*}
+   \begin{aligned}
+     E_{k,lr}
+              = \Phi \left(  \beta_0
+               + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+               + \sum_{m=1}^M \delta_m  D_{ml} \right)
+               - \Phi \left( \beta_0
+               + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+               + \sum_{m=1}^{M} \delta_m D_{mr} \right)
+   \end{aligned}
+   \end{equation*}\\
+   Logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+     E_{k,lr}
+              = \; & \frac{ \exp \left(  \beta_0
+                   + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+                   + \sum_{m=1}^M \delta_m  D_{ml} \right)}
+                 { 1 + \exp \left( \beta_0
+                   + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+                   + \sum_{m=1}^M \delta_m  D_{ml} \right)}\\
+                   & - \frac{ \exp \left( \beta_0
+                   + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+                   + \sum_{m=1}^{M} \delta_m D_{mr} \right)}
+                 { 1 + \exp \left( \beta_0
+                   + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+                   + \sum_{m=1}^M \delta_m  D_{mr} \right)}
+   \end{aligned}
+   \end{equation*}\\
+    Multinomial logistic regression &
+   \begin{equation*}
+   \begin{aligned}
+   E_{k, lr, \mathcal{P}} = \;
+   & \sum_{p \in \mathcal{P}} E_{k, lr, p}^* \\
+   E_{k, lr, p}^* = \;
+   & \frac{ \exp \left(  \beta_{0,p}
+         + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_{j,p} x_j
+         + \sum_{m=1}^M \delta_{m,p}  D_{ml} \right)}
+      { \sum_{o=1}^P
+         \exp \left( \beta_{0,o}
+            + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_{j,o} x_j
+            + \sum_{m=1}^M \delta_{m,o}  D_{ml} \right)} \\
+   & - \frac{ \exp \left( \beta_{0,p}
+         + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_{j,p} x_j
+         + \sum_{m=1}^{M} \delta_{m,p} D_{mr} \right)}
+      { \sum_{o=1}^P
+         \exp \left( \beta_{0,o}
+            + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_{j,o} x_j
+            + \sum_{m=1}^M \delta_{m,o}  D_{mr} \right)}
+   \end{aligned}
+   \end{equation*} \\[1em]
+   \bottomrule
+\end{tabular}\\[1ex]
+Note:
+\noteMLogitP
+\end{sidewaystable}
+
+To demonstrate how to group and re-base a categorical covariate,
+we use the results of the logistic regression model
+with \code{age} as interval-coded covariate
+that we already used as example in Section~\ref{sec:elaint}
+with estimation results presented in Table~\ref{tab:logitInt}.
+In this estimation, covariate \code{age} is coded as four intervals:
+30--37~years, 38--44~years, 45--52~years, and 53--60~years,
+where the interval 45--52~years is used as `base' interval.
+In our example,
+we apply function \code{urbinEffCat}
+to group and re-base the categories to calculate
+the effect of \code{age} changing from the 30--44~years (reference) interval
+to the 53--60~years interval:
+<<>>=
+urbinEffCat( coef(estLogitInt), xMeanInt, xPos = c( 3:5 ),
+  xGroups = c( -1, -1, 1, 0 ), model = "logit" )
+@
+Argument \code{xPos} indicates the positions of the
+categories of variable \code{age} in the coefficient vector and in the vector of mean values,
+argument \code{xGroups} indicates how the four original categories
+should be grouped and re-based,
+and all other arguments are defined as explained for the other functions
+of the \pkg{urbin} package.
+Argument \code{xGroups} must have one element for each category
+that was used in the estimation,
+where the categories are in the same order as indicated by argument \code{xPos}
+and the last element is the `base' category,
+i.e., in our case, the elements of argument \code{xGroups}
+must correspond to the order:
+30--37~years (first element of \code{xPos}),
+38--44~years (second element of \code{xPos}),
+53--60~years (third element of \code{xPos}),
+and 45--52~years (reference category).
+Each element of argument \code{xGroups} must be
+a $-1$ (indicating that the category should belong to the new reference category),
+a $1$ (indicating that the category should belong to the new category of interest),
+or a $0$ (indicating that the category should neither belong
+to the new reference category nor to the new category of interest).
+As the new reference category comprises
+both the 30--37~years interval and the 38--44~years interval,
+the values of the first two elements of argument \code{xGroups} must be~$-1$.
+As the new category of interest is the 53--60~years interval,
+the value of the third element of argument \code{xGroups} must be~$1$.
+As the old reference interval, 45--52~years,
+is neither in the new reference category nor in the new category of interest,
+the value of the fourth element of argument \code{xGroups} must be~$0$.
+The calculated effect size indicates
+that the probability that a woman is in the labour force
+is, \textit{ceteris paribus},
+\Sexpr{round(-100*urbinEffCat( coef(estLogitInt), xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ), model = "logit" )$effect)}%
+~percentage points lower for women aged 53--60~years
+than for women aged 30--44~years.
+
+\subsection{Approximation of standard errors}
+
+An approximate standard error of the effect of a grouped and re-based covariate
+can, again, be obtained by using the Delta method
+(equation~\ref{eq:DeltaMethod}).
+Appendix Section~\ref{sec:gradEffectCat} presents
+the gradient vectors of the effects
+with respect to the coefficients,
+$\partial E_{k,lr} / \partial ( \bm{\beta}^{\top} \bm{\delta}^{\top} )^{\top}$,
+for the various regression models.
+Argument \code{allCoefVcov} of function \code{urbinEffCat}
+can be used to specify the variance-covariance matrix
+of the estimated coefficients:
+<<>>=
+urbinEffCat( coef(estLogitInt), xMeanInt, c( 3:5 ),
+  c( -1, -1, 1, 0 ), vcov(estLogitInt), model = "logit" )
+@
+
+As most studies do not report the variance-covariance matrix,
+we repeat the previous calculation
+with providing only the standard errors
+so that \code{urbinEffCat} sets all covariances to zero:
+<<>>=
+urbinEffCat( coef(estLogitInt), xMeanInt, c( 3:5 ),
+  c( -1, -1, 1, 0 ), sqrt(diag(vcov(estLogitInt))),
+  model = "logit" )
+@
+Similarly to Section~\ref{sec:elaint},
+setting the covariances to zero
+usually results in a slight overestimation of the standard errors.
+As these overestimations are usually small
+and the standard errors are often anyway only used as weighting factors,
+we consider this approximation of the standard errors
+to be generally suitable for meta-analyses.
+
+
+\section{Non-binary categorical dependent variables}
+\label{sec:non-binaryDepVar}
+
+As explained in Section~\ref{sec:method},
+it can be possible
+to make results of studies with non-binary categorical dependent variables
+comparable to results of studies with binary dependent variables,
+if the categories of the (non-binary) dependent variable
+can be grouped into two groups
+that correspond to the two outcomes of the binary dependent variable
+in the other studies.
+
+In order to demonstrate this,
+we use an ordered probit regression with \code{age}
+as linear and quadratic covariate
+and a multinomial logistic regression
+with \code{age} as interval-coded covariate
+as examples.%
+\footnote{%
+The \R{} code for estimating these two models
+is available in Appendix Sections~\ref{sec:RCodeEstOProbit}
+and~\ref{sec:RCodeEstMLogitInt}, respectively.
+}
+The estimation results of these two models are presented
+in Tables~\ref{tab:estOProbit} and~\ref{tab:estMLogitInt},
+respectively.
+
+<<estOProbit,echo=FALSE, results='hide'>>=
+library( "MASS" )
+estOProbitQ <- polr( lfp3 ~ kids + age + I(age^2) + educ,
+  data = Mroz87, method = "probit", Hess = TRUE )
+xMeanOProbit <- c( xMeanQ, -1 )
+@
+<<tabEstOProbit,echo=FALSE, results='asis'>>=
+stargazer( estOProbitQ,
+  title = "Ordered probit regression results with age as linear and quadratic covariate",
+  label = "tab:estOProbit", header = FALSE,
+  ord.intercepts = TRUE, digits = 2 )
+@
+
+<<estMLogitInt,echo=FALSE, results='hide', message = FALSE>>=
+library( "mlogit" )
+estMLogitInt <- mlogit(
+  lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ,
+  data = Mroz87, reflevel = "no", shape = "wide" )
+@
+<<tabEstMLogit,echo=FALSE, results='asis'>>=
+stargazer( estMLogitInt,
+  title = "Multinomial logistic regression results with age as interval-coded covariate",
+  label = "tab:estMLogitInt", header = FALSE,
+  digits = 2 )
+@
+
+We combine the two outcomes `part-time labour force participation' and
+`full-time labour force participation'
+to one joint outcome category
+so that we obtain a binary outcome:
+`no labour force participation' and
+(part-time or full-time) 'labour force participation'.
+For ordered probit models,
+the negative value of the break point
+that separates the two groups of categories
+corresponds to the intercept
+of a binary probit model (see Section~\ref{sec:method}).
+Hence, in our example, the relevant break point is the one
+between the `no labour force participation' category
+and the `part-time labour force participation' category,
+which has an estimated value of
+\Sexpr{round(coef( summary( estOProbitQ ) )["no|part",1], 2)}
+(see Table~\ref{tab:estOProbit}).
+When applying one of the functions of the \pkg{urbin} package
+to ordered probit models,
+argument \code{iPos} must indicate
+the position of this break point
+in the vector of coefficients,
+while all other break points must be ignored.
+The element in the vector of the values of the covariates
+that corresponds to the relevant break point
+(as indicated by argument \code{iPos})
+must be minus one,
+in order to take into account
+that the intercept of a corresponding binary probit model
+must be replaced by the \emph{negative} value of the relevant break point
+of an ordered probit model.
+We set argument \code{model} to \code{"oprobit"}
+to indicate an ordered probit model,
+while all other arguments are used as explained above:
+<<>>=
+urbinEla( coef(summary(estOProbitQ))[-6,1], c( xMeanQ[-1], -1 ),
+  xPos = c( 2, 3 ), iPos = 5, model = "oprobit",
+  vcov(estOProbitQ)[-6,-6] )
+@
+The calculated semi-elasticity indicates
+that the probability that a woman is at least part-time in the labour force
+decreases,
+\textit{ceteris paribus}, by
+\Sexpr{-round(urbinEla( coef(summary(estOProbitQ))[-6,1], c( xMeanQ[-1], -1 ), xPos = c( 2, 3 ), iPos = 5, model = "oprobit" )$semEla, 2 )}%
+~percentage points if her age increases by one percent.
+
+In the multivariate logistic regression,
+`no labour force participation' is used as the reference category
+of the dependent variables,
+while `full-time labour force participation' and
+`part-time labour force participation' are used
+as first alternative category and second alternative category,
+respectively (see Table~\ref{tab:estMLogitInt}).
+When applying one of the functions of the \pkg{urbin} package
+to a multinomial logistic regression,
+argument \code{yCat} must indicate the categories of the dependent variable $\mathcal{P}$
+that correspond to a binary outcome of one.
+All other categories are considered to correspond to a binary outcome of zero.
+In argument \code{yCat}, a zero indicates the reference category,
+while a one, two, or three, etc.\ indicates the first, second, or third, etc.\
+alternative category, respectively.
+As the first and second alternative categories comprise
+the binary outcome of one in our example,
+i.e., $\mathcal{P} = \{ 1, 2 \}$,
+argument \code{yCat} must be a vector with two values: one and two.
+We set argument \code{model} to \code{"mlogit"}
+to indicate a multinomial logistic regression,
+while all other arguments are used as explained above:
+<<>>=
+coefPermuteInt <- c( seq( 1, 11, 2 ), seq( 2, 12, 2 ) )
+urbinElaInt( coef(estMLogitInt)[coefPermuteInt], xMeanInt,
+  c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit",
+  vcov(estMLogitInt)[coefPermuteInt,coefPermuteInt],
+  yCat = c( 1, 2 ) )
+@
+As the functions in package \pkg{urbin} expect
+that the coefficients of multinomial logistic regressions
+are grouped for each category of the dependent variable
+(i.e., $\beta_{0,1}, \ldots, \beta_{K,1}, \beta_{0,2}, \ldots, \beta_{K,2},
+\ldots, \beta_{0,P}, \ldots, \beta_{K,P}$),
+while the coefficients of models estimated by \code{mlogit}
+are grouped for each covariate
+(i.e., $\beta_{0,1}, \ldots, \beta_{0,P}, \beta_{1,1}, \ldots, \beta_{1,P},
+\ldots, \beta_{K,1}, \ldots, \beta_{K,P}$),
+we created a vector \code{coefPermuteInt}
+that reorders the coefficients and their variances and covariances
+so that they are ordered as expected by package \pkg{urbin}.
+The semi-elasticity indicates
+that the probability
+that a woman is either part-time or full-time in the labour force
+decreases, \textit{ceteris paribus}, by
+\Sexpr{-round(urbinElaInt( coef(estMLogitInt)[coefPermuteInt], xMeanInt, c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "mlogit", yCat = c( 1, 2 ) )$semEla, 2 )}%
+~percentage points if her age increases by one percent.
+
+
+\section{Conclusion}
+
+The direct comparison of coefficients from regression analyses from different studies is often
+meaningless because the studies use different estimation methods
+or different units of measurements or different encodings
+of the variables of interest.
+In this article, we propose straightforward and easy-to-implement approaches to
+unify results from regression analyses with binary dependent variables
+or categorical dependent variables that can be transformed to binary variables.
+
+We have implemented all suggested approaches in the \R{} package \pkg{urbin}.
+This article uses this package to demonstrate
+how regression results from differently specified regression analyses
+can be unified by calculating semi-elasticities
+of continuous and interval-coded covariates,
+by calculating effects of continuous covariates
+when they change between intervals,
+and by grouping and re-basing effects of categorical
+and interval-coded covariates.
+We show how to obtain valid approximations for
+the calculated standard errors of the semi-elasticities and effect sizes
+without information about the variance-covariance matrix of the coefficients,
+e.g., for cases where the user wants to use the standard errors as
+weighting factors in a meta-analysis.
+
+\clearpage
+
+\bibliographystyle{ama2}
+\bibliography{references}
+
+\clearpage
+
+%===================================== Appendix ======================================
+
+\appendix
+
+\section{Gradients for calculating approximate standard errors}
+
+
+%+++++++++++++++++++++++++++++++++++  semEla  ++++++++++++++++++++++++++++++++++
+\subsection{Gradients of semi-elasticities of continuous covariates}
+\label{sec:gradSemEla}
+
+%=================================  semEla: LPM  ===============================
+\subsubsection{Linear probability model}
+\label{sec:gradSemElaLpm}
+
+If the regression equation includes only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_j} &= 0
+\; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial \epsilon_k}{\partial \beta_k} &= x_k.
+\end{align}
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there is one additional gradient:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_{k+1}} &= 2 \; x_k^2.
+\end{align}
+
+
+%=============================  semEla: Probit  ================================
+\subsubsection{Probit regression}
+
+If the regression equation includes only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_j} &=
+   - \bm{X}'\bm{\beta} \; \epsilon_k \; x_j
+   \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial \epsilon_k}{\partial \beta_k} &=
+   - \bm{X}'\bm{\beta} \; \epsilon_k \; x_k
+   + \phi( \bm{X}'\bm{\beta} ) \; x_k
+\end{align}
+with $x_0 \equiv 1$.
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there is one additional gradient:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_{k+1}} &=
+   - \bm{X}'\bm{\beta} \; \epsilon_k \; x_k^2
+   + 2 \; \phi( \bm{X}'\bm{\beta} ) \; x_k^2.
+\end{align}
+
+%================================  semEla: Logit ===============================
+\subsubsection{Logistic regression}
+
+If the regression equation includes only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_j} &=
+   \left( 1 -
+      \frac{ 2 \; \exp \left( \bm{X}'\bm{\beta} \right) }
+         { 1 + \exp \left( \bm{X}'\bm{\beta} \right) } \right)
+   \epsilon_k \; x_j \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial \epsilon_k}{\partial \beta_k} &=
+   \left( 1 -
+      \frac{ 2 \; \exp \left( \bm{X}'\bm{\beta} \right) }
+         { 1 + \exp \left( \bm{X}'\bm{\beta} \right) } \right)
+   \epsilon_k \; x_k
+   + \frac{ \exp \left( \bm{X}'\bm{\beta} \right) }
+         { \left( 1 + \exp \left( \bm{X}'\bm{\beta} \right) \right)^2 } \; x_k
+\end{align}
+with $x_0 \equiv 1$ (see also \cite{Train2002}).
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there is one additional gradient:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_{k+1}} &=
+   \left( 1 -
+      \frac{ 2 \; \exp \left( \bm{X}'\bm{\beta} \right) }
+         { 1 + \exp \left( \bm{X}'\bm{\beta} \right) } \right)
+      \epsilon_k \; x_k^2
+   + 2 \; \frac{ \exp \left( \bm{X}'\bm{\beta} \right) }
+      { \left( 1 + \exp \left( \bm{X}'\bm{\beta} \right) \right)^2 } x_k^2.
+\end{align}
+
+%==================================  semEla: MNL  ==============================
+\subsubsection{Multinomial logistic regression}
+
+If the regression equation includes only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \beta_{j,o} }
+   \; \forall \; j = 0, \ldots, K;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{j,o}}
+= \; & \left( - \pi_p \epsilon_{k,o}^* - \pi_o \epsilon_{k,p}^*
+   + \Delta_{o,p} \epsilon_{k,p}^* \right) x_j \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*, \nonumber \\
+\frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{k,o}}
+= \; & \left( - \pi_p \epsilon_{k,o}^* - \pi_o \epsilon_{k,p}^*
+   - \pi_p \pi_o
+   + \Delta_{o,p} \left( \pi_p + \epsilon_{k,p}^* \right)
+   \right) x_k\\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^* \nonumber,
+\end{align}
+$x_0 \equiv 1$, and $\Delta_{o,p}$ denoting Kronecker's Delta
+with $\Delta_{o,p} = 1 \;  \forall \; o = p$
+and $\Delta_{o,p} = 0 \;  \forall \; o \neq p$.
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there are $P-1$ additional gradients:
+\begin{align}
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \beta_{k+1,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \beta_{k+1,o} }
+   \; \forall \; o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{k+1,o}}
+= \; & \left( - \pi_p \epsilon_{k,o}^* - \pi_o \epsilon_{k,p}^*
+   - 2 \pi_p \pi_o
+   + \Delta_{o,p} \left( 2 \pi_p + \epsilon_{k,p}^* \right)
+   \right) x_k^2\\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^* \nonumber.
+\end{align}
+
+
+%+++++++++++++++++++++++++++++++  semEla (simplified)  +++++++++++++++++++++++++
+\subsection{Simplified gradients of semi-elasticities of continuous covariates}
+\label{sec:gradSemElaSimple}
+
+%==========================  semEla (simplified): LPM  =========================
+\subsubsection{Linear probability model}
+
+As almost all elements of the gradient vector are zero
+(see section~\ref{sec:gradSemElaLpm}),
+almost all off-diagonal elements of the variance-covariance matrix
+of the estimated coefficients are anyway ignored
+when the Delta method is applied to calculate the approximate standard error
+of the semi-elasticity.
+Therefore, we do not need to obtain `simplified' gradients
+in order to avoid biases due to missing information
+about the off-diagonal elements of the variance-covariance matrix.
+
+%========================  semEla (simplified): Probit  ========================
+\subsubsection{Probit regression}
+
+In order to improve the approximation of the standard errors
+when the off-diagonal elements of the variance-covariance matrix
+of the estimated coefficients are unknown,
+we simplify the derivation of the gradients by ignoring
+that the `weighting factor' $\phi(\cdot)$ in the equation
+for calculating the semi-elasticities (see Table~\ref{tab:semiE})
+depends on the coefficients.
+If the regression equation includes only a linear term of the covariate of interest,
+the `simplified' gradients are:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_j} &=
+   0 \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial \epsilon_k}{\partial \beta_k} &=
+   \phi( \bm{X}'\bm{\beta} ) \; x_k.
+\end{align}
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there is one additional `simplified' gradient:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_{k+1}} &=
+   2 \; \phi( \bm{X}'\bm{\beta} ) \; x_k^2.
+\end{align}
+
+%===========================  semEla (simplified): Logit ===============================
+\subsubsection{Logistic regression}
+
+In order to improve the approximation of the standard errors
+when the off-diagonal elements of the variance-covariance matrix
+of the estimated coefficients are unknown,
+we simplify the derivation of the gradients by ignoring
+that the `weighting factor' $\exp(\cdot) / ( 1 - \exp(\cdot) )^2$ in the equation
+for calculating the semi-elasticities (see Table~\ref{tab:semiE})
+depends on the coefficients.
+If the regression equation includes only a linear term of the covariate of interest,
+the `simplified' gradients are:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_j} &=
+   0 \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial \epsilon_k}{\partial \beta_k} &=
+   \frac{ \exp \left( \bm{X}'\bm{\beta} \right) }
+         { \left( 1 + \exp \left( \bm{X}'\bm{\beta} \right) \right)^2 } \; x_k
+\end{align}
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there is one additional `simplified' gradient:
+\begin{align}
+\frac{\partial \epsilon_k}{\partial \beta_{k+1}} &=
+   2 \; \frac{ \exp \left( \bm{X}'\bm{\beta} \right) }
+      { \left( 1 + \exp \left( \bm{X}'\bm{\beta} \right) \right)^2 } x_k^2.
+\end{align}
+
+
+
+%=============================  semEla (simplified): MNL  ======================
+\subsubsection{Multinomial logistic regression}
+
+In order to improve the approximation of the standard errors
+when the off-diagonal elements of the variance-covariance matrix
+of the estimated coefficients are unknown,
+we simplify the derivation of the gradients by ignoring
+that the `weighting factors' $\pi_p ; p = \{ 1, \ldots , P \}$
+and $\pi_o ; o = \{ 1, \ldots , P \}$ in the equation
+for calculating the semi-elasticities (see Table~\ref{tab:semiE})
+depend on the coefficients.
+If the regression equation includes only a linear term of the covariate of interest,
+the `simplified' gradients are:
+\begin{align}
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \beta_{j,o} }
+   \; \forall \; j = 0, \ldots, K;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{j,o}}
+= \; & 0 \; \forall \; j \in \{ 0, \ldots, K \} \setminus k; p = 1, \ldots, P;
+   o \in \{ 1, \ldots, P \} \setminus p^*, \\
+\frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{k,o}}
+= \; & \left( - \pi_p \pi_o + \Delta_{o,p} \pi_p \right) x_k
+   \; \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*,
+\end{align}
+and $\Delta_{o,p}$ denoting Kronecker's Delta
+with $\Delta_{o,p} = 1 \;  \forall \; o = p$
+and $\Delta_{o,p} = 0 \;  \forall \; o \neq p$.
+
+If the regression equation additionally includes a quadratic term of the covariate of interest,
+there are $P-1$ additional gradients:
+\begin{align}
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \beta_{k+1,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \beta_{k+1,o} }
+   \; \forall \; o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{ \partial \epsilon_{k,p}^*}{\partial \beta_{k+1,o}}
+= \; & \left( - 2 \pi_p \pi_o + 2 \Delta_{o,p} \pi_p \right) x_k^2 \\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*. \nonumber
+\end{align}
+
+
+%+++++++++++++++++++++++++++++++++  semElaInt  +++++++++++++++++++++++++++++++++
+\subsection{Gradients of semi-elasticities of interval-coded covariates}
+\label{sec:gradSemElaInt}
+
+%================================ semElaInt: LPM  ==============================
+\subsubsection{Linear probability model}
+
+The gradients are:
+\begin{align}
+\frac{ \partial \epsilon_k }{ \partial \beta_j }
+   = \; & 0 \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{ \partial \epsilon_k }{ \partial \delta_1 }
+   = \; & - w_1 \\
+\frac{ \partial \epsilon_k }{ \partial \delta_m }
+   = \; & w_{m-1} - w_m
+      \; \forall \; m \in \{2, \ldots, M-1 \} \setminus m^* \\
+\frac{ \partial \epsilon_k }{ \partial \delta_M }
+   = \; & w_{M-1}
+\end{align}
+
+%===========================  semElaInt: Probit  ===============================
+\subsubsection{Probit regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial \epsilon_k }{ \partial \beta_j }
+   = \; & x_j \sum_{m=1}^{M-1} \left( \phi_{m+1}(\cdot) - \phi_m(\cdot) \right)
+      w_m \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{ \partial \epsilon_k }{ \partial \delta_1 }
+   = \; & - \phi_1(\cdot) \; w_1 \\
+\frac{ \partial \epsilon_k }{ \partial \delta_m }
+   = \; & \phi_m(\cdot) \left( w_{m-1} - w_m \right)
+      \; \forall \; m \in \{2, \ldots, M-1 \} \setminus m^* \\
+\frac{ \partial \epsilon_k }{ \partial \delta_M }
+   = \; & \phi_M(\cdot) \; w_{M-1} \\
+\text{with } \phi_m
+   \equiv \; & \phi \left( \beta_0 +
+      \sum_{ j \in \{1, \ldots, K \} \setminus k } \beta_j x_j +
+      \delta_m \right)
+   \; \forall \; m = 1, \ldots, M
+   \label{eq:probElaIntPhiM}
+\end{align}
+and $x_0 \equiv 1$.
+
+%===============================  semElaInt: Logit =============================
+\subsubsection{Logistic regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial \epsilon_k }{ \partial \beta_j }
+   = \; & x_j \sum_{m=1}^{M-1} \left(
+         \frac{ \exp_{m+1}(\cdot) }{ ( 1 + \exp_{m+1}(\cdot) )^2 }
+         - \frac{ \exp_{m}(\cdot) }{ ( 1 + \exp_{m}(\cdot) )^2 }
+      \right) w_m \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k \nonumber \\
+\frac{ \partial \epsilon_k }{ \partial \delta_1 }
+   = \; & - \frac{ \exp_{1}(\cdot) }{ ( 1 + \exp_{1}(\cdot) )^2 } \; w_1 \\
+\frac{ \partial \epsilon_k }{ \partial \delta_m }
+   = \; & \frac{ \exp_{m}(\cdot) }{ ( 1 + \exp_{m}(\cdot) )^2 }
+      \left( w_{m-1} - w_m \right)
+      \; \forall \; m \in \{2, \ldots, M-1 \} \setminus m^* \\
+\frac{ \partial \epsilon_k }{ \partial \delta_M }
+   = \; & \frac{ \exp_{M}(\cdot) }{ ( 1 + \exp_{M}(\cdot) )^2 } \; w_{M-1}
+\end{align}
+with $x_0 \equiv 1$
+and $\exp_m; m = 1, \ldots, M$ as defined in Table~\ref{tab:semiInt}.
+
+%================================  semElaInt: MNL  =============================
+\subsubsection{Multinomial logistic regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \beta_{j,o} }
+   \; \forall \; j \in \{ 0, \ldots, K \} \setminus k;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\frac{ \partial \epsilon_{k,\mathcal{P}} }{ \partial \delta_{m,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial \epsilon_{k,p}^* }{ \partial \delta_{m,o} }
+   \; \forall \; m \in \{ 1, \ldots, M \} \setminus m^*;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{\partial \epsilon_{k,p}^*}{\partial \beta_{j,o}}
+= \; & x_j \sum_{m=1}^{M-1}
+   \Big( \pi_{p,m} \pi_{o,m} - \pi_{p,m+1} \pi_{o,m+1} \\
+   & \qquad \qquad - \Delta_{op} \left( \pi_{p,m} - \pi_{p,m+1} \right) \Big)
+      w_m \nonumber \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*, \nonumber \\
+\frac{\partial \epsilon_{k,p}^*}{\partial \delta_{1,o}}
+= \; & \left( \pi_{p,1} \pi_{o,1} - \Delta_{o,p} \; \pi_{p,1} \right) w_1 \\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*, \nonumber \\
+\frac{\partial \epsilon_{k,p}^*}{\partial \delta_{m,o}}
+= \; & \left( \pi_{p,m} \pi_{o,m} - \Delta_{o,p} \; \pi_{p,m} \right)
+   \left( w_m - w_{m-1} \right) \\
+   & \forall \; m \in \{ 2, \ldots, M-1 \} \setminus m^*; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*, \nonumber \\
+\frac{\partial \epsilon_{k,p}^*}{\partial \delta_{M,o}}
+= \; & - \left( \pi_{p,M} \pi_{o,M} - \Delta_{o,p} \; \pi_{p,M} \right) w_{M-1}\\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^*, \nonumber \\
+\pi_{p,m}
+\equiv \; & \frac{ \exp_{m,p} }{ \sum_{o=1}^P \exp_{m,o} }
+   \; \forall \; p = 1, \ldots, P; m = 1, \ldots, M,
+\end{align}
+$x_0 \equiv 1$, and $\exp_{m,p}; m = 1, \ldots, M; p = 1, \ldots, P$
+   as defined in Table~\ref{tab:semiInt}.
+
+%+++++++++++++++++++++++++++++++++  effectInt  +++++++++++++++++++++++++++++++++
+\subsection{Gradients of effects of continuous covariates when they change between intervals}
+\label{sec:gradEffectInt}
+
+%================================ effectInt: LPM  ==============================
+\subsubsection{Linear probability model}
+
+If the regression equation includes
+only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial E_{k,lr}}{\partial \beta_j} &= 0
+\; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial E_{k,lr}}{\partial \beta_k} &= \bar{x}_{kl} - \bar{x}_{kr}.
+\end{align}
+
+If the regression equation additionally includes
+a quadratic term of the covariate of interest,
+there is one additional gradient:
+\begin{align}
+\frac{\partial E_{k,lr}}{\partial \beta_{k+1}}
+& = \overline{x^2_{kl}} - \overline{x^2_{kr}}.
+\end{align}
+
+%===========================  effectInt: Probit  ===============================
+\subsubsection{Probit regression}
+
+If the regression equation includes
+only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial E_{k, lr}}{\partial \beta_j}
+   & = \left( \phi_l - \phi_r \right) x_j
+      \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial E_{k, lr}}{\partial \beta_k}
+   & = \phi_l \; \bar{x}_{kl} - \phi_r \; \bar{x}_{kr} \\
+\text{with } \phi_n
+   & \equiv \phi\left( \beta_0
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus k } \beta_j x_j
+      + \beta_k \bar{x}_{kn} \right)
+   \; \forall \; n \in \{ l, r \}
+\end{align}
+and $x_0 \equiv 1$.
+
+If the regression equation additionally includes
+a quadratic term of the covariate of interest,
+we have:
+\begin{align}
+\phi_n
+   \equiv \; & \phi\left( \beta_0
+      + \sum_{ j \in \{ 1, \ldots, K \} \setminus \{ k, k + 1 \} } \beta_j x_j
+      + \beta_k \bar{x}_{kn} + \beta_{k+1} \overline{x^2}_{kn} \right) \\
+   & \forall \; n \in \{ l, r \} \nonumber
+\end{align}
+and there is one additional gradient:
+\begin{align}
+\frac{\partial E_{k, lr}}{\partial \beta_{k+1}}
+   & = \phi_l \; \overline{x^2}_{kl} - \phi_r \; \overline{x^2}_{kr} .
+\end{align}
+
+%===============================  effectInt: Logit =============================
+\subsubsection{Logistic regression}
+
+If the regression equation includes
+only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{\partial E_{k, lr}}{\partial \beta_j}
+   & = \left(
+      \frac{ \exp_l( \cdot ) }{ ( 1 + \exp_l( \cdot ) )^2 }
+      - \frac{ \exp_r( \cdot ) }{ ( 1 + \exp_r( \cdot ) )^2 } \right) x_j
+      \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{\partial E_{k, lr}}{\partial \beta_k}
+   & = \frac{ \exp_l( \cdot ) }{ ( 1 + \exp_l( \cdot ) )^2 } \; \bar{x}_{kl}
+      - \frac{ \exp_r( \cdot ) }{ ( 1 + \exp_r( \cdot ) )^2 } \; \bar{x}_{kr} \\
+\text{with } \exp_n
+   & \equiv \exp\left( \beta_0
+      + \sum_{j \in \{ 1, \ldots, K \} \setminus k } \beta_j x_j
+      + \beta_k \bar{x}_{kn} \right)
+   \; \forall \; n \in \{ l, r \}
+\end{align}
+and $x_0 \equiv 1$.
+
+If the regression equation additionally includes
+a quadratic term of the covariate of interest,
+we have:
+\begin{align}
+\exp_n
+   \equiv \; & \exp\left( \beta_0
+      + \sum_{ j \in \{ 1, \ldots, K \} \setminus \{ k, k + 1 \} } \beta_j x_j
+      + \beta_k \bar{x}_{kn} + \beta_{k+1} \overline{x^2}_{kn} \right) \\
+   & \forall \; n \in \{ l, r \} \nonumber
+\end{align}
+and there is one additional gradient:
+\begin{align}
+\frac{\partial E_{k, lr}}{\partial \beta_{k+1}}
+   & = \frac{ \exp_l( \cdot ) }{ ( 1 + \exp_l( \cdot ) )^2 }
+         \; \overline{x^2}_{kl}
+      - \frac{ \exp_r( \cdot ) }{ ( 1 + \exp_r( \cdot ) )^2 }
+         \; \overline{x^2}_{kr} .
+\end{align}
+
+%================================  effectInt: MNL ==============================
+\subsubsection{Multinomial logistic regression}
+
+If the regression equation includes
+only a linear term of the covariate of interest,
+the gradients are:
+\begin{align}
+\frac{ \partial E_{k,lr,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial E_{k,lr,p}^* }{ \partial \beta_{j,o} }
+   \; \forall \; j = 0, \ldots, K;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\frac{\partial E_{k, lr, p}^*}{\partial \beta_{j,o}}
+   = \; & \Big( \pi_{p,r} \; \pi_{o,r} - \pi_{p,l} \; \pi_{o,l}
+      - \Delta_{o,p} \left( \pi_{p,r} - \pi_{p,l} \right) \Big) x_j \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^* \nonumber \\
+\frac{\partial E_{k, lr, p}^*}{\partial \beta_{k,o}}
+   = \; & \left( \pi_{p,r} \; \pi_{o,r} - \Delta_{o,p} \; \pi_{p,r} \right)
+         \bar{x}_{kr}
+      - \left( \pi_{p,l} \; \pi_{o,l} - \Delta_{o,p} \; \pi_{p,l} \right)
+         \bar{x}_{kl} \\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^* \nonumber \\
+\text{with } \pi_{p,n}
+   \equiv & \frac{ \exp\left(
+      \beta_{0,p}
+      + \sum_{ j \in \{1, \ldots, K \} \setminus k } \beta_{j,p} x_j
+      + \beta_{k,p} \bar{x}_{k,n} \right) }{
+   \sum_{o=1}^P \exp\left( \beta_{0,o}
+      + \sum_{ j \in \{1, \ldots, K \} \setminus k } \beta_{j,o} x_j
+      + \beta_{k,o} \bar{x}_{k,n} \right)}\\
+   & \forall \; p = 1, \ldots, P; n \in \{ l, r \}, \nonumber
+\end{align}
+$x_0 \equiv 1$, and $\Delta_{o,p}$ denoting Kronecker's Delta
+with $\Delta_{o,p} = 1 \;  \forall \; o = p$
+and $\Delta_{o,p} = 0 \;  \forall \; o \neq p$.
+
+If the regression equation additionally includes
+a quadratic term of the covariate of interest,
+we have:
+\begin{align}
+\pi_{p,n}
+   \equiv & \frac{ \exp\left(
+      \beta_{0,p}
+      + \sum_{ j \in \{1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,p} x_j
+      + \beta_{k,p} \bar{x}_{k,n} + \beta_{k+1,p} \overline{x^2}_{k,n} \right) }{
+   \sum_{o=1}^P \exp( \beta_{0,o}
+      + \sum_{ j \in \{1, \ldots, K \} \setminus \{ k, k+1 \} } \beta_{j,o} x_j
+      + \beta_{k,o} \bar{x}_{k,n} + \beta_{k+1,o} \overline{x^2}_{k,n} )}\\
+   & \forall \; p = 1, \ldots, P; n \in \{ l, r \} \nonumber
+\end{align}
+and there are $P \; ( P - 1 )$ additional gradients:
+\begin{align}
+\frac{\partial E_{k, lr, p}}{\partial \beta_{k+1,o}} = \;
+   & \left( \pi_{p,r} \; \pi_{o,r} - \Delta_{o,p} \; \pi_{p,r} \right)
+         \bar{x}_{kr}^2
+      - \left( \pi_{p,l} \; \pi_{o,l} - \Delta_{o,p} \; \pi_{p,l} \right)
+         \bar{x}_{kl}^2 \\
+   & \forall \; p = 1, \ldots, P;
+      o \in \{ 1, \ldots, P \} \setminus p^* . \nonumber
+\end{align}
+
+%+++++++++++++++++++++++++++++++++  effectCat  +++++++++++++++++++++++++++++++++
+\subsection{Gradients of grouped and re-based effects of categorical and interval-coded covariates}
+\label{sec:gradEffectCat}
+
+%================================ effectCat: LPM  ==============================
+\subsubsection{Linear probability model}
+
+The gradients are:
+\begin{align}
+\frac{ \partial E_{k,lr} }{ \partial \beta_j }
+   = \; & 0 \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{ \partial E_{k,lr} }{ \partial \delta_m }
+   = \; & D_{ml} - D_{mr}
+      \; \forall \; m \in \{1, \ldots, M \} \setminus m^*
+\end{align}
+
+%===========================  effectCat: Probit  ===============================
+\subsubsection{Probit regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial E_{k,lr} }{ \partial \beta_j }
+   = \; & \left( \phi_l(\cdot) - \phi_r(\cdot) \right) x_j
+   \; \forall \; j \in \{ 0, \ldots, K \} \setminus k \\
+\frac{ \partial E_{k,lr} }{ \partial \delta_m }
+   = \; & \phi_l(\cdot) \; D_{ml} - \phi_r(\cdot) \; D_{mr}
+      \; \forall \; m \in \{1, \ldots, M \} \setminus m^* \\
+\text{with } \phi_n(\cdot)
+   \equiv \; & \phi\left( \beta_0
+      + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+      + \sum_{m=1}^M \delta_m D_{mn} \right) \\
+   & \forall \; n \in \{ r, l \} \nonumber
+\end{align}
+and $x_0 \equiv 1$.
+
+%===============================  effectCat: Logit =============================
+\subsubsection{Logistic regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial E_{k,lr} }{ \partial \beta_j }
+   = \; & \left(
+         \frac{ \exp_l(\cdot) }{ \left( 1 + \exp_l(\cdot) \right)^2 }
+         - \frac{ \exp_r(\cdot) }{ \left( 1 + \exp_r(\cdot) \right)^2 }
+      \right) x_j \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k \nonumber \\
+\frac{ \partial E_{k,lr} }{ \partial \delta_m }
+   = \; & \frac{ \exp_l(\cdot) }{ \left( 1 + \exp_l(\cdot) \right)^2 }
+         \; D_{ml}
+      - \frac{ \exp_r(\cdot) }{ \left( 1 + \exp_r(\cdot) \right)^2 }
+         \; D_{mr} \\
+      & \forall \; m \in \{1, \ldots, M \} \setminus m^* \nonumber \\
+\text{with } \exp_n(\cdot)
+   \equiv \; & \exp\left( \beta_0
+      + \sum_{j \in \{ 1, \ldots , K \} \setminus k} \beta_j x_j
+      + \sum_{m=1}^M \delta_m D_{mn} \right) \\
+   & \forall \; n \in \{ r, l \} \nonumber
+\end{align}
+and $x_0 \equiv 1$.
+
+%================================  effectCat: MNL ==============================
+\subsubsection{Multinomial logistic regression}
+
+The gradients are:
+\begin{align}
+\frac{ \partial E_{k,lr,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial E_{k,lr,p}^* }{ \partial \beta_{j,o} }
+   \; \forall \; j \in \{ 0, \ldots, K \} \setminus k;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\frac{ \partial E_{k,lr,\mathcal{P}} }{ \partial \beta_{j,o} }
+= \; & \sum_{p \in \mathcal{P}}
+   \frac{ \partial E_{k,lr,p}^* }{ \partial \delta_{m,o} }
+   \; \forall \; m \in \{ 1, \ldots, M \} \setminus m^*;
+      o \in \{ 1, \ldots, P \} \setminus p^* \\
+\text{with } \frac{\partial E_{k, lr, p}^*}{\partial \beta_{j,o}} = \; &
+   \left( \pi_{p,r} \; \pi_{o,r} - \pi_{p,l} \; \pi_{o,l}
+      - \Delta_{o,p} \left( \pi_{p,r} - \pi_{p,l} \right) \right) x_j \\
+   & \forall \; j \in \{ 0, \ldots, K \} \setminus k;
+       p = 1, \ldots, P, \nonumber \\
+\frac{\partial E_{k, lr, p}^*}{\partial \delta_{m,o}} = \; &
+   \left( \pi_{p,r} \; \pi_{o,r} - \Delta_{o,p} \; \pi_{p,r} \right) D_{mr}
+   - \left( \pi_{p,l} \; \pi_{o,l} - \Delta_{o,p} \; \pi_{p,l} \right) D_{ml} \\
+   & \forall \; m \in \{1, \ldots, M \} \setminus m^*;
+      p = 1, \ldots, P, \nonumber \\
+\pi_{p,n} \equiv &
+   \frac{
+      \exp\left( \beta_{0,p}
+         + \sum_{j \in \{1, \ldots , K \} \setminus k } \beta_{j,p} x_j
+         + \sum_{m=1}^M \delta_{m,p} D_{m,n} \right) }
+   { \sum_{o=1}^P \exp\left( \beta_{0,o}
+         + \sum_{j  \in \{1, \ldots , K \} \setminus k } \beta_{j,o} x_j
+         + \sum_{m=1}^M \delta_{m,o} D_{m,n} \right) }\\
+   & \forall \; p = 1, \ldots, P; n \in \{ l, r \}, \nonumber
+\end{align}
+and $x_0 \equiv 1$.
+
+
+\clearpage
+
+\section{Derivation of a binary probit model from an ordered probit model}
+\label{sec:derivBinProbitOrderedProbit}
+
+\begin{align}
+\Pr( Y^* = 1 | X = x )
+& = \Pr( Y \in \{ p^*, \ldots , P \} | X = x ) \\
+& = \sum_{p = p^*}^{P} \Pr( Y = p | X = x ) \\
+& = \sum_{p = p^*}^{P} \left(
+    \Phi\left( \mu_p - \sum_{j = 1}^K \beta_j x_j \right)
+    - \Phi\left( \mu_{p - 1} - \sum_{j = 1}^K \beta_j x_j \right) \right)\\
+& = \sum_{p = p^*}^{P}
+    \Phi\left( \mu_p - \sum_{j = 1}^K \beta_j x_j \right)
+  - \sum_{p = p^*}^{P}
+    \Phi\left( \mu_{P - 1} - \sum_{j = 1}^K \beta_j x_j \right) \\
+& = \sum_{p = p^*}^{P}
+    \Phi\left( \mu_p - \sum_{j = 1}^K \beta_j x_j \right)
+  - \sum_{p = p^* - 1}^{P-1}
+    \Phi\left( \mu_{p} - \sum_{j = 1}^K \beta_j x_j \right) \\
+& = \Phi\left( \mu_P - \sum_{j = 1}^K \beta_j x_j \right)
+  - \Phi\left( \mu_{p^* - 1} - \sum_{j = 1}^K \beta_j x_j \right) \\
+& = \Phi\left( \infty \right)
+  - \Phi\left( \mu_{p^* - 1} - \sum_{j = 1}^K \beta_j x_j \right) \\
+& = 1 - \Phi\left( \mu_{p^* - 1} - \sum_{j = 1}^K \beta_j x_j \right) \\
+& = \Phi\left( - \mu_{p^* - 1} + \sum_{j = 1}^K \beta_j x_j \right)
+\end{align}
+
+
+\clearpage
+
+\section{Additional \R{} code}
+
+\subsection{Loading and preparing data}
+\label{sec:RCodeData}
+
+Loading the data set:
+<<eval=FALSE>>=
+<<dataLoad>>
+@
+
+\noindent%
+Creating a dummy variable for the presence of children in the household:
+<<eval=FALSE>>=
+<<dataKids>>
+@
+
+\noindent%
+Creating dummy variables for interval-coding variable \code{age}:
+<<eval=FALSE>>=
+<<dataAgeInt>>
+@
+
+\noindent%
+Creating an ordered categorical variable
+that indicates three levels of labour force participation:
+<<eval=FALSE>>=
+<<dataLfp3>>
+@
+
+
+\subsection{Probit regressions with \code{age}
+  as linear covariate and with \code{age} as linear and quadratic covariate}
+\label{sec:RCodeEstProbit}
+
+Estimations and creating vectors with mean values of covariates:
+<<eval=FALSE>>=
+<<estProbit>>
+@
+
+
+\subsection{Logistic regressions with \code{age}
+  as interval-coded covariate}
+\label{sec:RCodeEstLogitInt}
+
+Estimation and creating a vector with mean values of covariates:
+<<eval=FALSE>>=
+<<estLogitInt>>
+@
+
+
+\subsection{Ordered probit regression with \code{age}
+  as linear and quadratic covariate}
+\label{sec:RCodeEstOProbit}
+
+Estimation:
+<<eval=FALSE>>=
+<<estOProbit>>
+@
+
+
+\subsection{Multinomial logistic regressions with \code{age}
+  as interval-coded covariate}
+\label{sec:RCodeEstMLogitInt}
+
+Estimation:
+<<eval=FALSE>>=
+<<estMLogitInt>>
+@
+
+\end{document}

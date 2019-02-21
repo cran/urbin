@@ -1,5 +1,6 @@
-c2a9c0bed1bfe1c911d512d57cd5d01b *DESCRIPTION
+65004174f9202563e73f9dae7c2a5ca8 *DESCRIPTION
 403bb5056ba5d5e585dfd0ba678c76e3 *NAMESPACE
+7e5ddf6890f95ad1f5432d2b04418be8 *NEWS
 ded748887f5614d6f17fbd08f0ccd4c6 *R/EXSquared.R
 150eaf87acff8113a7379ab717593a9d *R/checkIPos.R
 a0ec420e82ff4b950c775e702a35a9c2 *R/checkXBeta.R
@@ -13,6 +14,10 @@ e483209ba7fd42f5fd5a1d112a5166ce *R/prepareVcov.R
 9493c69a4d1026cff3714858798909be *R/urbinEffInt.R
 b2da2206847354225f4c4bfb43634ecb *R/urbinEla.R
 c022b82fa67ece0416549eba76498f80 *R/urbinElaInt.R
+52cb27996be0c64749c456fd3273c609 *build/vignette.rds
+c915d2d0aecbcd118b465dc6454a01a1 *inst/doc/Manuscript.R
+020a7d4ba6b2899a99197d1bfb4e4b4a *inst/doc/Manuscript.Rnw
+4f815ee09f8ef27a139826c427e22a58 *inst/doc/Manuscript.pdf
 6a35d28969a435dc7b7718abc969bbce *man/urbin.Rd
 644fb375d70b4b142700073bf620bbe3 *tests/logit.R
 34486fe4cc345030a7ccce8f0e837769 *tests/logit.Rout.save
@@ -27,10 +32,13 @@ d2a6f5465a67a3b44a528b30f0ab9af3 *tests/logitElaInt.Rout.save
 898a1b703e9e30954455ef900e08ac8e *tests/lpm.R
 e2c262078b954d5790f42473d712bce8 *tests/lpm.Rout.save
 39e0365ee5a1a1dca3caf37caddc1ed3 *tests/mlogit.R
-368e2d29531a3b44c625a0f69342b0bc *tests/mlogit.Rout.save
+2ad0e3841dcfedda3b30f851b62704d8 *tests/mlogit.Rout.save
 91a686a234b933d6f3e7d07a431d6c9c *tests/mvprobit.R
 24f405b312afc4f9efd56dae55d40bd1 *tests/mvprobit.Rout.save
 aa0487ff360594f3f293bc471463833c *tests/oprobit.R
 00f85eb1b41113ab07530aca3cb3e816 *tests/oprobit.Rout.save
 1b486d1daacab78c84a0992038254ad7 *tests/probit.R
 052d00d399f04937a0c59db031f03248 *tests/probit.Rout.save
+020a7d4ba6b2899a99197d1bfb4e4b4a *vignettes/Manuscript.Rnw
+1eedbb366b718c7e7ccab097b1bfda5a *vignettes/ama2.bst
+8226c9054eec83d6afa7573135e0be35 *vignettes/references.bib

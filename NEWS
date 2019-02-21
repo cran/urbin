@@ -1,0 +1,15 @@
+THIS IS THE CHANGELOG OF THE "urbin" PACKAGE
+
+Please note that only the most significant changes are reported here.
+A full ChangeLog is available in the log messages of the SVN repository
+on R-Forge.
+
+
+   CHANGES IN VERSION 0.1-8 (2019-02-21)
+
+* added a 'vignette'
+
+
+   CHANGES IN VERSION 0.1-6 (2018-11-03)
+
+* initial release on CRAN
