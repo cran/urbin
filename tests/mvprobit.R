@@ -1,6 +1,11 @@
 library( "urbin" )
-library( "maxLik" )
-library( "mvProbit" )
+maxLikLoaded <- require( "maxLik" )
+if( !require( "mvProbit" ) ) {
+  q( save = "no" )
+}
+if( !require( "sampleSelection" ) ) {
+  q( save = "no" )
+}
 options( digits = 2 )
 
 # load data set
@@ -35,9 +40,11 @@ Mroz87Lower$husMoonlight <- Mroz87Upper$husMoonlight <- 1
 urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
   seSimplify = FALSE )$derivCoef
 # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-  t0 = coef( estMvProbitLin )[1:4],
-  allXVal = xMeanLin, xPos = 3, model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
+    t0 = coef( estMvProbitLin )[1:4],
+    allXVal = xMeanLin, xPos = 3, model = "probit" ) )
+}
 # simplified partial derivatives of the semi-elasticity wrt the coefficients
 urbinEla( coef( estMvProbitLin )[1:4], xMeanLin, 3, model = "probit",
   seSimplify = TRUE )$derivCoef
@@ -81,9 +88,11 @@ urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit" )
 urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
   seSimplify = FALSE )$derivCoef
 # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-  t0 = coef( estMvProbitQuad )[1:5],
-  allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
+    t0 = coef( estMvProbitQuad )[1:5],
+    allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" ) )
+}
 # simplified partial derivatives of the semi-elasticity wrt the coefficients
 urbinEla( coef( estMvProbitQuad )[1:5], xMeanQuad, c( 3, 4 ), model = "probit",
   seSimplify = TRUE )$derivCoef
@@ -196,10 +205,12 @@ Mroz87LowerMean$educ <- Mroz87UpperMean$educ <- xMeanInt[ "educ" ]
 urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "probit" )$derivCoef
 # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
-  t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt,
-  xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
-  model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
+    t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt,
+    xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
+    model = "probit" ) )
+}
 # semi-elasticity of age with standard errors (full covariance matrix)
 urbinElaInt( coef( estMvProbitInt )[1:6], xMeanInt,
   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ),
@@ -252,10 +263,12 @@ mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + educ,
 urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-  t0 = coef( estMvProbitLin )[1:4],
-  allXVal = xMeanLinInt, xPos = 3,
-  refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
+    t0 = coef( estMvProbitLin )[1:4],
+    allXVal = xMeanLinInt, xPos = 3,
+    refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
+}
 # effects of age changing from the 30-40 interval to the 50-60 interval
 # (full covariance matrix)
 urbinEffInt( coef( estMvProbitLin )[1:4], xMeanLinInt, 3,
@@ -296,10 +309,12 @@ mvProbitExp( cbind( lfp, husMoonlight ) ~ kids + age + I(age^2) + educ,
 urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 # numerically computed partial derivatives of the effect wrt the coefficients
-numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-  t0 = coef( estMvProbitQuad )[1:5],
-  allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
-  refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
+    t0 = coef( estMvProbitQuad )[1:5],
+    allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
+    refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
+}
 # effects of age changing from the 30-40 interval to the 50-60 interval
 # (full covariance matrix)
 urbinEffInt( coef( estMvProbitQuad )[1:5], xMeanQuadInt, c( 3, 4 ),
@@ -367,10 +382,12 @@ mvProbitExp(
 urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
   model = "probit" )$derivCoef
 # numerically computed partial derivatives of the effect wrt the coefficients
-numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-  t0 = coef( estMvProbitInt )[1:6],
-  allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
-  model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
+    t0 = coef( estMvProbitInt )[1:6],
+    allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
+    model = "probit" ) )
+}
 # with full covariance matrix
 urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( -1, -1, 1, 0 ),
   model = "probit", allCoefVcov = vcov( estMvProbitInt )[1:6,1:6] )
@@ -411,10 +428,12 @@ sum( Mroz87$age38.44 ) / sum( Mroz87$age38.44 + Mroz87$age45.52 ) *
 urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
   model = "probit" )$derivCoef
 # numerically computed partial derivatives of the effect wrt the coefficients
-numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-  t0 = coef( estMvProbitInt )[1:6],
-  allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
-  model = "probit" )
+if( maxLikLoaded ) {
+  print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
+    t0 = coef( estMvProbitInt )[1:6],
+    allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
+    model = "probit" ) )
+}
 # with full covariance matrix
 urbinEffCat( coef( estMvProbitInt )[1:6], xMeanInt, c( 3:5 ), c( 0, 1, -1, 1 ),
   model = "probit", allCoefVcov = vcov( estMvProbitInt )[1:6,1:6] )

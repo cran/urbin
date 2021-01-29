@@ -1,6 +1,6 @@
 
-R version 3.5.1 (2018-07-02) -- "Feather Spray"
-Copyright (C) 2018 The R Foundation for Statistical Computing
+R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
+Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -16,7 +16,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 > library( "urbin" )
-> library( "maxLik" )
+> maxLikLoaded <- require( "maxLik" )
+Loading required package: maxLik
 Loading required package: miscTools
 
 Please cite the 'maxLik' package as:
@@ -24,9 +25,16 @@ Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihoo
 
 If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
 https://r-forge.r-project.org/projects/maxlik/
-> library( "mvProbit" )
+> if( !require( "mvProbit" ) ) {
++   q( save = "no" )
++ }
+Loading required package: mvProbit
 Loading required package: mvtnorm
 Loading required package: abind
+> if( !require( "sampleSelection" ) ) {
++   q( save = "no" )
++ }
+Loading required package: sampleSelection
 > options( digits = 2 )
 > 
 > # load data set
@@ -66,7 +74,7 @@ R_1_2 -0.108370   0.062642  -1.730  0.08363 .
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 BHHH maximisation, 0 iterations
-Return code 4: Iteration limit exceeded.
+Return code 4: Iteration limit exceeded (iterlim)
 Log-likelihood: -931 on 9 Df
 
 > # mean values of the explanatory variables
@@ -92,9 +100,11 @@ semEla  stdEr
          kids    age   educ 
  0.057  0.040 19.140  0.705 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-+   t0 = coef( estMvProbitLin )[1:4],
-+   allXVal = xMeanLin, xPos = 3, model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++     t0 = coef( estMvProbitLin )[1:4],
++     allXVal = xMeanLin, xPos = 3, model = "probit" ) )
++ }
      b_1_0 b_1_1 b_1_2 b_1_3
 [1,] 0.057  0.04    19   0.7
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
@@ -168,7 +178,7 @@ R_1_2 -0.1031040  0.0629743  -1.637  0.10158
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 BHHH maximisation, 0 iterations
-Return code 4: Iteration limit exceeded.
+Return code 4: Iteration limit exceeded (iterlim)
 Log-likelihood: -926 on 11 Df
 
 > # mean values of the explanatory variables
@@ -190,9 +200,11 @@ semEla  stdEr
            kids     age     age    educ 
 1.1e-01 7.6e-02 2.1e+01 1.6e+03 1.3e+00 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-+   t0 = coef( estMvProbitQuad )[1:5],
-+   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++     t0 = coef( estMvProbitQuad )[1:5],
++     allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" ) )
++ }
      b_1_0 b_1_1 b_1_2 b_1_3 b_1_4
 [1,]  0.11 0.076    21  1560   1.3
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
@@ -330,7 +342,7 @@ R_1_2 -0.10180    0.06302  -1.615  0.10623
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 BHHH maximisation, 0 iterations
-Return code 4: Iteration limit exceeded.
+Return code 4: Iteration limit exceeded (iterlim)
 Log-likelihood: -924 on 13 Df
 
 > # mean values of the explanatory variables
@@ -389,10 +401,12 @@ semEla  stdEr
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "probit" )$derivCoef
 [1] -0.0041 -0.0029 -0.5552 -0.0494  0.5454 -0.0509
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
-+   t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt,
-+   xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
++     t0 = coef( estMvProbitInt )[1:6], allXVal = xMeanInt,
++     xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
++     model = "probit" ) )
++ }
        b_1_0   b_1_1 b_1_2  b_1_3 b_1_4  b_1_5
 [1,] -0.0041 -0.0029 -0.56 -0.049  0.55 -0.051
 > # semi-elasticity of age with standard errors (full covariance matrix)
@@ -464,10 +478,12 @@ effect  stdEr
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 [1] 0.020 0.014 8.653 0.242
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-+   t0 = coef( estMvProbitLin )[1:4],
-+   allXVal = xMeanLinInt, xPos = 3,
-+   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++     t0 = coef( estMvProbitLin )[1:4],
++     allXVal = xMeanLinInt, xPos = 3,
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
++ }
      b_1_0 b_1_1 b_1_2 b_1_3
 [1,]  0.02 0.014   8.7  0.24
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -525,10 +541,12 @@ effect  stdEr
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 [1] 2.2e-03 1.5e-03 7.7e+00 6.9e+02 2.7e-02
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-+   t0 = coef( estMvProbitQuad )[1:5],
-+   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
-+   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++     t0 = coef( estMvProbitQuad )[1:5],
++     allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
++ }
       b_1_0  b_1_1 b_1_2 b_1_3 b_1_4
 [1,] 0.0022 0.0015   7.7   686 0.027
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -630,10 +648,12 @@ effect  stdEr
 +   model = "probit" )$derivCoef
 [1] -0.0046 -0.0032 -0.2240 -0.1570  0.3765 -0.0559
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-+   t0 = coef( estMvProbitInt )[1:6],
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++     t0 = coef( estMvProbitInt )[1:6],
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++     model = "probit" ) )
++ }
        b_1_0   b_1_1 b_1_2 b_1_3 b_1_4  b_1_5
 [1,] -0.0046 -0.0032 -0.22 -0.16  0.38 -0.056
 > # with full covariance matrix
@@ -693,10 +713,12 @@ effect  stdEr
 +   model = "probit" )$derivCoef
 [1]  0.0123  0.0086  0.0000  0.1690 -0.3765  0.1517
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-+   t0 = coef( estMvProbitInt )[1:6],
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++     t0 = coef( estMvProbitInt )[1:6],
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
++     model = "probit" ) )
++ }
      b_1_0  b_1_1 b_1_2 b_1_3 b_1_4 b_1_5
 [1,] 0.012 0.0086     0  0.17 -0.38  0.15
 > # with full covariance matrix
@@ -733,4 +755,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-   3.51    0.47    3.99 
+   7.37    0.86    8.26 

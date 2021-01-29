@@ -1,6 +1,6 @@
 
-R version 3.5.1 (2018-07-02) -- "Feather Spray"
-Copyright (C) 2018 The R Foundation for Statistical Computing
+R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
+Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -16,7 +16,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 Type 'q()' to quit R.
 
 > library( "urbin" )
-> library( "maxLik" )
+> maxLikLoaded <- require( "maxLik" )
+Loading required package: maxLik
 Loading required package: miscTools
 
 Please cite the 'maxLik' package as:
@@ -24,7 +25,8 @@ Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihoo
 
 If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
 https://r-forge.r-project.org/projects/maxlik/
-> library( "mfx" )
+> mfxLoaded <- require( "mfx" )
+Loading required package: mfx
 Loading required package: sandwich
 Loading required package: lmtest
 Loading required package: zoo
@@ -37,6 +39,10 @@ The following objects are masked from 'package:base':
 
 Loading required package: MASS
 Loading required package: betareg
+> if( !require( "sampleSelection" ) ) {
++   q( save = "no" )
++ }
+Loading required package: sampleSelection
 > options( digits = 4 )
 > 
 > # load data set
@@ -97,9 +103,11 @@ Number of Fisher Scoring iterations: 4
              kids      age     educ 
  0.05743  0.03996 19.14172  0.70559 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-+   t0 = coef( estProbitLin ),
-+   allXVal = xMeanLin, xPos = 3, model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++     t0 = coef( estProbitLin ),
++     allXVal = xMeanLin, xPos = 3, model = "probit" ) )
++ }
      (Intercept)    kids   age   educ
 [1,]     0.05743 0.03996 19.14 0.7056
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
@@ -125,16 +133,22 @@ In urbinEla(coef(estProbitLin), xMeanLin, 3, model = "probit", sqrt(diag(vcov(es
  semEla   stdEr 
 -0.3199  0.1166 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> estProbitLinMfx <- probitmfx( lfp ~ kids + age + educ, data = Mroz87 )
-> estProbitLinMfx$mfxest[ "age", 1:2 ] * xMeanLin[ "age" ]
+> if( mfxLoaded ) {
++   estProbitLinMfx <- probitmfx( lfp ~ kids + age + educ, data = Mroz87 )
++   print( estProbitLinMfx$mfxest[ "age", 1:2 ] * xMeanLin[ "age" ] )
++ }
     dF/dx Std. Err. 
   -0.3199    0.1166 
-> urbinEla( estProbitLinMfx$mfxest[ "age", 1 ], xMeanLin["age"], 1, iPos = 0,
-+   model = "lpm", estProbitLinMfx$mfxest[ "age", 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitLinMfx$mfxest[ "age", 1 ], xMeanLin["age"], 1, iPos = 0,
++     model = "lpm", estProbitLinMfx$mfxest[ "age", 2 ] ) )
++ }
  semEla   stdEr 
 -0.3199  0.1166 
-> urbinEla( estProbitLinMfx$mfxest[ , 1 ], xMeanLin[-1], 2, iPos = 0,
-+   model = "lpm", estProbitLinMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitLinMfx$mfxest[ , 1 ], xMeanLin[-1], 2, iPos = 0,
++     model = "lpm", estProbitLinMfx$mfxest[ , 2 ] ) )
++ }
  semEla   stdEr 
 -0.3199  0.1166 
 > 
@@ -192,9 +206,11 @@ Number of Fisher Scoring iterations: 4
                kids       age       age      educ 
 1.097e-01 7.634e-02 2.066e+01 1.560e+03 1.348e+00 
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
-+   t0 = coef( estProbitQuad ),
-+   allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEla( x, ... )$semEla },
++     t0 = coef( estProbitQuad ),
++     allXVal = xMeanQuad, xPos = c( 3, 4 ), model = "probit" ) )
++ }
      (Intercept)    kids   age I(age^2)  educ
 [1,]      0.1097 0.07634 20.66     1560 1.348
 > # simplified partial derivatives of the semi-elasticity wrt the coefficients
@@ -242,37 +258,47 @@ In urbinEla(coef(estProbitQuad), xMeanQuad, c(3, 4), model = "probit",  :
 -0.3193  0.1352 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
 > # (differs from the above, because mean(age)^2 is not the same as mean(age^2))
-> estProbitQuadMfx <- probitmfx( lfp ~ kids + age + I(age^2) + educ, data = Mroz87 )
-> estProbitQuadMfx$mfxest[ "age", 1:2 ] * xMeanQuad[ "age" ] +
-+   2 * estProbitQuadMfx$mfxest[ "I(age^2)", 1:2 ] * xMeanQuad[ "age" ]^2
+> if( mfxLoaded ) {
++   estProbitQuadMfx <- probitmfx( lfp ~ kids + age + I(age^2) + educ, data = Mroz87 )
++   print( estProbitQuadMfx$mfxest[ "age", 1:2 ] * xMeanQuad[ "age" ] +
++     2 * estProbitQuadMfx$mfxest[ "I(age^2)", 1:2 ] * xMeanQuad[ "age" ]^2 )
++ }
     dF/dx Std. Err. 
   -0.3332    2.1983 
-> urbinEla( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
-+   xMeanQuad["age"], 1:2, iPos = 0,
-+   model = "lpm", estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
++     xMeanQuad["age"], 1:2, iPos = 0,
++     model = "lpm", estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] ) )
++ }
  semEla   stdEr 
 -0.3332  1.5544 
 Warning message:
 In urbinEla(allCoef = estProbitQuadMfx$mfxest[c("age", "I(age^2)"), 1], allXVal = xMeanQuad["age"], xPos = 1:2, model = "lpm", allCoefVcov = estProbitQuadMfx$mfxest[c("age", "I(age^2)"), 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( estProbitQuadMfx$mfxest[ , 1 ],
-+   xMeanQuad[-1], 2:3, iPos = 0,
-+   model = "lpm", estProbitQuadMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitQuadMfx$mfxest[ , 1 ],
++     xMeanQuad[-1], 2:3, iPos = 0,
++     model = "lpm", estProbitQuadMfx$mfxest[ , 2 ] ) )
++ }
  semEla   stdEr 
 -0.3332  1.5544 
 Warning message:
 In urbinEla(allCoef = estProbitQuadMfx$mfxest[, 1], allXVal = xMeanQuad[-1], xPos = 2:3, model = "lpm", allCoefVcov = estProbitQuadMfx$mfxest[, 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEla( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
-+   xMeanQuad["age"], 1:2, iPos = 0,
-+   model = "lpm", estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
-+   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ],
++     xMeanQuad["age"], 1:2, iPos = 0,
++     model = "lpm", estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) ) )
++ }
  semEla   stdEr 
 -0.3332  0.1411 
-> urbinEla( estProbitQuadMfx$mfxest[ , 1 ],
-+   xMeanQuad[-1], 2:3, iPos = 0,
-+   model = "lpm", estProbitQuadMfx$mfxest[ , 2 ],
-+   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
+> if( mfxLoaded ) {
++   print( urbinEla( estProbitQuadMfx$mfxest[ , 1 ],
++     xMeanQuad[-1], 2:3, iPos = 0,
++     model = "lpm", estProbitQuadMfx$mfxest[ , 2 ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) ) )
++ }
  semEla   stdEr 
 -0.3332  0.1411 
 > 
@@ -364,10 +390,12 @@ Number of Fisher Scoring iterations: 4
 +   c( 3, 4, 0, 5 ), c( 30, 37.5, 44.5, 52.5, 60 ), model = "probit" )$derivCoef
 [1] -0.004223 -0.002939 -0.555180 -0.049412  0.545345 -0.051890
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
-+   t0 = coef( estProbitInt ), allXVal = xMeanInt,
-+   xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinElaInt( x, ... )$semEla },
++     t0 = coef( estProbitInt ), allXVal = xMeanInt,
++     xPos = c( 3, 4, 0, 5 ), xBound = c( 30, 37.5, 44.5, 52.5, 60 ),
++     model = "probit" ) )
++ }
      (Intercept)      kids age30.37TRUE age38.44TRUE age53.60TRUE     educ
 [1,]   -0.004223 -0.002939      -0.5552     -0.04941       0.5453 -0.05189
 > # semi-elasticity of age with standard errors (full covariance matrix)
@@ -383,16 +411,20 @@ Number of Fisher Scoring iterations: 4
  semEla   stdEr 
 -0.3754  0.1137 
 > # semi-elasticity of age based on partial derivatives calculated by the mfx package
-> estProbitIntMfx <- probitmfx( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
-+   data = Mroz87 )
-> urbinElaInt( estProbitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ],
-+   c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
-+   estProbitIntMfx$mfxest[ 2:4, 2 ] )
+> if( mfxLoaded ) {
++   estProbitIntMfx <- probitmfx( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
++     data = Mroz87 )
++   print( urbinElaInt( estProbitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ],
++     c( 1, 2, 0, 3 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
++     estProbitIntMfx$mfxest[ 2:4, 2 ] ) )
++ }
  semEla   stdEr 
 -0.3770  0.1162 
-> urbinElaInt( estProbitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ],
-+   c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
-+   estProbitIntMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinElaInt( estProbitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ],
++     c( 2, 3, 0, 4 ), iPos = 0, c( 30, 37.5, 44.5, 52.5, 60 ), model = "lpm",
++     estProbitIntMfx$mfxest[ , 2 ] ) )
++ }
  semEla   stdEr 
 -0.3770  0.1162 
 > 
@@ -422,10 +454,12 @@ Number of Fisher Scoring iterations: 4
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 [1] 0.01969 0.01370 8.65401 0.24193
 > # numerically computed partial derivatives of the semi-elasticity wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-+   t0 = coef( estProbitLin ),
-+   allXVal = xMeanLinInt, xPos = 3,
-+   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++     t0 = coef( estProbitLin ),
++     allXVal = xMeanLinInt, xPos = 3,
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
++ }
      (Intercept)   kids   age   educ
 [1,]     0.01969 0.0137 8.654 0.2419
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -443,14 +477,18 @@ Number of Fisher Scoring iterations: 4
   effect    stdEr 
 -0.15062  0.06132 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffInt( estProbitLinMfx$mfxest[ "age", 1 ], NULL, 1, iPos = 0,
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitLinMfx$mfxest[ "age", 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitLinMfx$mfxest[ "age", 1 ], NULL, 1, iPos = 0,
++     c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitLinMfx$mfxest[ "age", 2 ] ) )
++ }
   effect    stdEr 
 -0.15041  0.05482 
-> urbinEffInt( estProbitLinMfx$mfxest[ , 1 ], NULL, 2, iPos = 0,
-+   c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitLinMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitLinMfx$mfxest[ , 1 ], NULL, 2, iPos = 0,
++     c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitLinMfx$mfxest[ , 2 ] ) )
++ }
   effect    stdEr 
 -0.15041  0.05482 
 > 
@@ -480,10 +518,12 @@ Number of Fisher Scoring iterations: 4
 +   c( 30, 40 ), c( 50, 60 ), model = "probit" )$derivCoef
 [1] 2.238e-03 1.557e-03 7.675e+00 6.865e+02 2.750e-02
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
-+   t0 = coef( estProbitQuad ),
-+   allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
-+   refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffInt( x, ... )$effect },
++     t0 = coef( estProbitQuad ),
++     allXVal = xMeanQuadInt, xPos = c( 3, 4 ),
++     refBound = c( 30, 40 ), intBound = c( 50, 60 ), model = "probit" ) )
++ }
      (Intercept)     kids   age I(age^2)   educ
 [1,]    0.002238 0.001557 7.675    686.5 0.0275
 > # effects of age changing from the 30-40 interval to the 50-60 interval
@@ -512,32 +552,40 @@ In urbinEffInt(allCoef = coef(estProbitQuad), allXVal = xMeanQuadInt, xPos = c(3
   effect    stdEr 
 -0.25282  0.07137 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffInt( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
++     iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ] ) )
++ }
  effect   stdEr 
 -0.2530  0.7523 
 Warning message:
 In urbinEffInt(allCoef = estProbitQuadMfx$mfxest[c("age", "I(age^2)"), 1], allXVal = NULL, xPos = 1:2, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = estProbitQuadMfx$mfxest[c("age", "I(age^2)"), 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estProbitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitQuadMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
++     iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitQuadMfx$mfxest[ , 2 ] ) )
++ }
  effect   stdEr 
 -0.2530  0.7523 
 Warning message:
 In urbinEffInt(allCoef = estProbitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:3, refBound = c(30, 40), intBound = c(50, 60), model = "lpm", allCoefVcov = estProbitQuadMfx$mfxest[, 2], iPos = 0) :
   the returned standard error is likely largely upward biased and, thus, in most cases meaningless; you can provide the full covariance matrix via argument 'allCoefVcov' to avoid this bias or use argument 'xMeanSd' to substantially reduce this bias 
-> urbinEffInt( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
-+   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 1 ], NULL, 1:2,
++     iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitQuadMfx$mfxest[ c( "age", "I(age^2)" ), 2 ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) ) )
++ }
   effect    stdEr 
 -0.25303  0.07423 
-> urbinEffInt( estProbitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
-+   iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
-+   estProbitQuadMfx$mfxest[ , 2 ],
-+   xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) )
+> if( mfxLoaded ) {
++   print( urbinEffInt( estProbitQuadMfx$mfxest[ , 1 ], NULL, 2:3,
++     iPos = 0, c( 30, 40 ), c( 50, 60 ), model = "lpm",
++     estProbitQuadMfx$mfxest[ , 2 ],
++     xMeanSd = c( mean( Mroz87$age ), sd( Mroz87$age ) ) ) )
++ }
   effect    stdEr 
 -0.25303  0.07423 
 > 
@@ -568,10 +616,12 @@ In urbinEffInt(allCoef = estProbitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:
 +   model = "probit" )$derivCoef
 [1] -0.004644 -0.003231 -0.224001 -0.157068  0.376426 -0.057056
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-+   t0 = coef( estProbitInt ),
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++     t0 = coef( estProbitInt ),
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( -1, -1, 1, 0 ),
++     model = "probit" ) )
++ }
      (Intercept)      kids age30.37TRUE age38.44TRUE age53.60TRUE     educ
 [1,]   -0.004644 -0.003231       -0.224      -0.1571       0.3764 -0.05706
 > # with full covariance matrix
@@ -585,16 +635,21 @@ In urbinEffInt(allCoef = estProbitQuadMfx$mfxest[, 1], allXVal = NULL, xPos = 2:
   effect    stdEr 
 -0.25237  0.07097 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffCat( estProbitIntMfx$mfxest[ 2:4, 1 ],
-+   xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
-+   estProbitIntMfx$mfxest[ 2:4, 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffCat( estProbitIntMfx$mfxest[ 2:4, 1 ],
++     xMeanInt[ 3:5 ], c(1:3), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
++     estProbitIntMfx$mfxest[ 2:4, 2 ] ) )
++ }
   effect    stdEr 
 -0.25340  0.07249 
-> urbinEffCat( estProbitIntMfx$mfxest[ , 1 ],
-+   xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
-+   estProbitIntMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffCat( estProbitIntMfx$mfxest[ , 1 ],
++     xMeanInt[ -1 ], c(2:4), iPos = 0, c( -1, -1, 1, 0 ), model = "lpm",
++     estProbitIntMfx$mfxest[ , 2 ] ) )
++ }
   effect    stdEr 
 -0.25340  0.07249 
+> 
 > 
 > ### effects of age changing from the 53-60 category to the 38-52 category
 > # without standard errors
@@ -615,10 +670,12 @@ effect  stdEr
 +   model = "probit" )$derivCoef
 [1]  0.012449  0.008663  0.000000  0.168992 -0.376426  0.152958
 > # numerically computed partial derivatives of the effect wrt the coefficients
-> numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
-+   t0 = coef( estProbitInt ),
-+   allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
-+   model = "probit" )
+> if( maxLikLoaded ) {
++   print( numericGradient( function( x, ... ){ urbinEffCat( x, ... )$effect },
++     t0 = coef( estProbitInt ),
++     allXVal = xMeanInt, xPos = c( 3:5 ), xGroups = c( 0, 1, -1, 1 ),
++     model = "probit" ) )
++ }
      (Intercept)     kids age30.37TRUE age38.44TRUE age53.60TRUE  educ
 [1,]     0.01245 0.008663            0        0.169      -0.3764 0.153
 > # with full covariance matrix
@@ -632,16 +689,20 @@ effect  stdEr
  effect   stdEr 
 0.22284 0.06572 
 > # semi-elasticity of age based on partial derivative calculated by the mfx package
-> urbinEffCat( estProbitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3),
-+   c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estProbitIntMfx$mfxest[ 2:4, 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffCat( estProbitIntMfx$mfxest[ 2:4, 1 ], xMeanInt[ 3:5 ], c(1:3),
++     c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estProbitIntMfx$mfxest[ 2:4, 2 ] ) )
++ }
  effect   stdEr 
 0.22346 0.06683 
-> urbinEffCat( estProbitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4),
-+   c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estProbitIntMfx$mfxest[ , 2 ] )
+> if( mfxLoaded ) {
++   print( urbinEffCat( estProbitIntMfx$mfxest[ , 1 ], xMeanInt[ -1 ], c(2:4),
++     c( 0, 1, -1, 1 ), iPos = 0, model = "lpm", estProbitIntMfx$mfxest[ , 2 ] ) )
++ }
  effect   stdEr 
 0.22346 0.06683 
 > 
 > 
 > proc.time()
    user  system elapsed 
-  0.712   0.036   0.745 
+  2.898   0.115   3.010 

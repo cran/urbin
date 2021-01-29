@@ -1,4 +1,4 @@
-\documentclass[a4paper]{article}
+\documentclass[a4paper]{scrartcl}
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{calrsfs}
@@ -37,16 +37,13 @@
 \author{
    {Geraldine Henningsen}%
 \footnote{corresponding author.
-    Technical University of Denmark,
-    Department of Management Engineering,
-    Produktionstorvet~426, 2800~Kgns.~Lyngby, Denmark.
-    Phone +45-2135-8518, e-mail: \url{gehe@dtu.dk}.}
+    E-mail: \url{geraldine.henningsen@googlemail.com}.}
 \and
    {Arne Henningsen}%
 \footnote{
     University of Copenhagen,
     Department of Food and Resource Economics,
-    Rolighedsvej~25, 1958~Frederiksberg~C, Denmark.
+    Rolighedsvej~23, 1958~Frederiksberg~C, Denmark.
     Phone: +45-3533-2274, e-mail: \url{arne@ifro.ku.dk}.}
 \thanks{Geraldine Henningsen was supported by the `SAVE-E' project funded by the
         `Innovation Fund Denmark' (grant number:~4106-00009B).
@@ -460,7 +457,7 @@ that correspond to a binary outcome of one,
 while all categories that are not in $\mathcal{P}$
 correspond to a binary outcome of zero.
 }
-\begin{sidewaystable}[!h]
+\begin{sidewaystable}[hp]
 \caption{Semi-elasticities of continuous covariates for 6~different regression models}
 \label{tab:semiE}
 \begin{tabular}{ p{5cm} p{15cm} }
@@ -849,7 +846,7 @@ that is caused by a one percent increase of the covariate~$x_k$.
 
 Table~\ref{tab:semiInt} presents the equations for calculating the semi-elasticities
 of interval-coded covariates for all six estimation methods covered in this article.
-\begin{sidewaystable}[!h]
+\begin{sidewaystable}[hp]
  \caption{Semi-elasticities of interval-coded covariates
     for 6~different regression models}
  \label{tab:semiInt}
@@ -1123,7 +1120,7 @@ is $1 / ( b_m - b_{m-1} )$:
 Table~\ref{tab:effCont} presents the equations for calculating the effect sizes
 of continuous covariates when they change between intervals
 for all six estimation methods covered in this article.
-\begin{sidewaystable}[!h]
+\begin{sidewaystable}[hp]
  \caption{Effects of continuous covariates when they change between intervals
     for 6~different regression models}
  \label{tab:effCont}
@@ -1409,7 +1406,7 @@ with covariate~$x_k$ being in category~$c_m$.
 Table~\ref{tab:effGroup} presents the equations for
 grouping and re-basing effects of categorical and interval-coded covariates
 for all six estimation methods covered in this article.
-\begin{sidewaystable}[!h]
+\begin{sidewaystable}[hp]
  \caption{Grouping and re-basing effects of categorical and interval-coded covariates
     for 6~different regression models}
  \label{tab:effGroup}
