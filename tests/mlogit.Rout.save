@@ -1,7 +1,7 @@
 
-R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
-Copyright (C) 2020 The R Foundation for Statistical Computing
-Platform: x86_64-pc-linux-gnu (64-bit)
+R version 4.4.1 (2024-06-14) -- "Race for Your Life"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -63,6 +63,8 @@ Loading required package: sampleSelection
 > ### linear in age
 > estMLogitLin <- mlogit( lfp3 ~ 0 | kids + age + educ, data = Mroz87,
 +   reflevel = "no", shape = "wide" )
+> # remove non-reproducible results such as the duration of the estimation
+> estMLogitLin$est.stat <- NULL
 > summary( estMLogitLin )
 
 Call:
@@ -73,10 +75,7 @@ Frequencies of alternatives:choice
    no  full  part 
 0.432 0.297 0.271 
 
-nr method
-4 iterations, 0h:0m:0s 
-g'(-H)^-1g = 4.56E-05 
-successive function values within tolerance limits 
+NULL
 
 Coefficients :
                  Estimate Std. Error z-value Pr(>|z|)    
@@ -338,6 +337,8 @@ In urbinEla(coef(estMLogitLin)[coefPermuteLin], xMeanLin, 3, model = "mlogit",  
 > ### quadratic in age
 > estMLogitQuad <- mlogit( lfp3 ~ 0 | kids + age + I(age^2) + educ,
 +   data = Mroz87, reflevel = "no", shape = "wide" )
+> # remove non-reproducible results such as the duration of the estimation
+> estMLogitQuad$est.stat <- NULL
 > summary( estMLogitQuad )
 
 Call:
@@ -348,10 +349,7 @@ Frequencies of alternatives:choice
    no  full  part 
 0.432 0.297 0.271 
 
-nr method
-4 iterations, 0h:0m:0s 
-g'(-H)^-1g = 3.79E-05 
-successive function values within tolerance limits 
+NULL
 
 Coefficients :
                  Estimate Std. Error z-value Pr(>|z|)    
@@ -769,6 +767,8 @@ semEla  stdEr
 > # estimation
 > estMLogitInt <- mlogit( lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ,
 +   data = Mroz87, reflevel = "no", shape = "wide" )
+> # remove non-reproducible results such as the duration of the estimation
+> estMLogitInt$est.stat <- NULL
 > summary( estMLogitInt )
 
 Call:
@@ -779,10 +779,7 @@ Frequencies of alternatives:choice
    no  full  part 
 0.432 0.297 0.271 
 
-nr method
-4 iterations, 0h:0m:0s 
-g'(-H)^-1g = 0.000156 
-successive function values within tolerance limits 
+NULL
 
 Coefficients :
                   Estimate Std. Error z-value Pr(>|z|)    
@@ -1931,4 +1928,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  4.780   0.186   4.981 
+  3.641   0.160   3.792 

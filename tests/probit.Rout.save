@@ -1,7 +1,7 @@
 
-R version 4.0.3 (2020-10-10) -- "Bunny-Wunnies Freak Out"
-Copyright (C) 2020 The R Foundation for Statistical Computing
-Platform: x86_64-pc-linux-gnu (64-bit)
+R version 4.4.1 (2024-06-14) -- "Race for Your Life"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -60,10 +60,6 @@ Loading required package: sampleSelection
 Call:
 glm(formula = lfp ~ kids + age + educ, family = binomial(link = "probit"), 
     data = Mroz87)
-
-Deviance Residuals: 
-   Min      1Q  Median      3Q     Max  
--1.895  -1.234   0.802   1.059   1.589  
 
 Coefficients:
             Estimate Std. Error z value Pr(>|z|)    
@@ -162,10 +158,6 @@ In urbinEla(coef(estProbitLin), xMeanLin, 3, model = "probit", sqrt(diag(vcov(es
 Call:
 glm(formula = lfp ~ kids + age + I(age^2) + educ, family = binomial(link = "probit"), 
     data = Mroz87)
-
-Deviance Residuals: 
-   Min      1Q  Median      3Q     Max  
--1.927  -1.231   0.785   1.053   1.654  
 
 Coefficients:
              Estimate Std. Error z value Pr(>|z|)    
@@ -322,10 +314,6 @@ In urbinEla(allCoef = estProbitQuadMfx$mfxest[, 1], allXVal = xMeanQuad[-1], xPo
 Call:
 glm(formula = lfp ~ kids + age30.37 + age38.44 + age53.60 + educ, 
     family = binomial(link = "probit"), data = Mroz87)
-
-Deviance Residuals: 
-   Min      1Q  Median      3Q     Max  
--1.897  -1.215   0.804   1.069   1.729  
 
 Coefficients:
              Estimate Std. Error z value Pr(>|z|)    
@@ -705,4 +693,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  2.898   0.115   3.010 
+  1.542   0.085   1.618 

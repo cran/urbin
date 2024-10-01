@@ -5,6 +5,13 @@ A full ChangeLog is available in the log messages of the SVN repository
 on R-Forge.
 
 
+   CHANGES IN VERSION 0.1-14 (2024-10-01)
+
+* updated and improved tests
+
+* no user-visible changes (except for adding the ORCIDs of the authors)
+
+
    CHANGES IN VERSION 0.1-12 (2021-01-28)
 
 * added a second vignette (as addendum to the first vignette)

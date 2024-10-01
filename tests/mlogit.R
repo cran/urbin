@@ -24,6 +24,8 @@ all.equal( Mroz87$lfp3 == "no", Mroz87$lfp == 0 )
 ### linear in age
 estMLogitLin <- mlogit( lfp3 ~ 0 | kids + age + educ, data = Mroz87,
   reflevel = "no", shape = "wide" )
+# remove non-reproducible results such as the duration of the estimation
+estMLogitLin$est.stat <- NULL
 summary( estMLogitLin )
 # vector for permuting coefficients so that they are ordered in the same way
 # as expected by urbinEla()
@@ -170,6 +172,8 @@ all.equal( rep( 0, 2 ), unlist(
 ### quadratic in age
 estMLogitQuad <- mlogit( lfp3 ~ 0 | kids + age + I(age^2) + educ,
   data = Mroz87, reflevel = "no", shape = "wide" )
+# remove non-reproducible results such as the duration of the estimation
+estMLogitQuad$est.stat <- NULL
 summary( estMLogitQuad )
 # vector for permuting coefficients so that they are ordered in the same way
 # as expected by urbinEla()
@@ -391,6 +395,8 @@ all.equal(
 # estimation
 estMLogitInt <- mlogit( lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ,
   data = Mroz87, reflevel = "no", shape = "wide" )
+# remove non-reproducible results such as the duration of the estimation
+estMLogitInt$est.stat <- NULL
 summary( estMLogitInt )
 # vector for permuting coefficients so that they are ordered in the same way
 # as expected by urbinEla()
