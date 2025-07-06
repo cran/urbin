@@ -1,6 +1,6 @@
 library( "urbin" )
 maxLikLoaded <- require( "maxLik" )
-if( !require( "mlogit" ) ) {
+if( suppressMessages( !require( "mlogit" ) ) ) {
   q( save = "no" )
 }
 if( !require( "sampleSelection" ) ) {

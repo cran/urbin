@@ -179,49 +179,49 @@ urbinElaInt( coef(estMLogitInt)[coefPermuteInt], xMeanInt,
   yCat = c( 1, 2 ) )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  data( "Mroz87", package = "sampleSelection" )
+# data( "Mroz87", package = "sampleSelection" )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  Mroz87$kids <- Mroz87$kids5 + Mroz87$kids618
+# Mroz87$kids <- Mroz87$kids5 + Mroz87$kids618
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  Mroz87$age30.37 <- Mroz87$age >= 30 & Mroz87$age <= 37
-#  Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
-#  Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
-#  Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
-#  all.equal(
-#    Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
-#    rep( 1, nrow( Mroz87 ) ) )
+# Mroz87$age30.37 <- Mroz87$age >= 30 & Mroz87$age <= 37
+# Mroz87$age38.44 <- Mroz87$age >= 38 & Mroz87$age <= 44
+# Mroz87$age45.52 <- Mroz87$age >= 45 & Mroz87$age <= 52
+# Mroz87$age53.60 <- Mroz87$age >= 53 & Mroz87$age <= 60
+# all.equal(
+#   Mroz87$age30.37 + Mroz87$age38.44 + Mroz87$age45.52 + Mroz87$age53.60,
+#   rep( 1, nrow( Mroz87 ) ) )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  Mroz87$lfp3 <- factor( ifelse( Mroz87$hours == 0, "no",
-#    ifelse( Mroz87$hours <= 1300, "part", "full" ) ),
-#    ordered = TRUE, levels = c( "no", "part", "full" ) )
+# Mroz87$lfp3 <- factor( ifelse( Mroz87$hours == 0, "no",
+#   ifelse( Mroz87$hours <= 1300, "part", "full" ) ),
+#   ordered = TRUE, levels = c( "no", "part", "full" ) )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  estProbit <- glm( lfp ~ kids + age + educ,
-#    family = binomial(link = "probit"), data = Mroz87 )
-#  xMean <- c( 1, colMeans( Mroz87[ , c( "kids", "age", "educ" ) ] ) )
-#  
-#  estProbitQ <- glm( lfp ~ kids + age + I(age^2) + educ,
-#    family = binomial(link = "probit"), data = Mroz87 )
-#  xMeanQ <- c( xMean[ 1:3], xMean[3]^2, xMean[4] )
+# estProbit <- glm( lfp ~ kids + age + educ,
+#   family = binomial(link = "probit"), data = Mroz87 )
+# xMean <- c( 1, colMeans( Mroz87[ , c( "kids", "age", "educ" ) ] ) )
+# 
+# estProbitQ <- glm( lfp ~ kids + age + I(age^2) + educ,
+#   family = binomial(link = "probit"), data = Mroz87 )
+# xMeanQ <- c( xMean[ 1:3], xMean[3]^2, xMean[4] )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  estLogitInt <- glm( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
-#    family = binomial(link = "logit"), data = Mroz87 )
-#  xMeanInt <- c( xMean[1:2], mean( Mroz87$age30.37 ),
-#    mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMean[4] )
+# estLogitInt <- glm( lfp ~ kids + age30.37 + age38.44 + age53.60 + educ,
+#   family = binomial(link = "logit"), data = Mroz87 )
+# xMeanInt <- c( xMean[1:2], mean( Mroz87$age30.37 ),
+#   mean( Mroz87$age38.44 ), mean( Mroz87$age53.60 ), xMean[4] )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  library( "MASS" )
-#  estOProbitQ <- polr( lfp3 ~ kids + age + I(age^2) + educ,
-#    data = Mroz87, method = "probit", Hess = TRUE )
-#  xMeanOProbit <- c( xMeanQ, -1 )
+# library( "MASS" )
+# estOProbitQ <- polr( lfp3 ~ kids + age + I(age^2) + educ,
+#   data = Mroz87, method = "probit", Hess = TRUE )
+# xMeanOProbit <- c( xMeanQ, -1 )
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  library( "mlogit" )
-#  estMLogitInt <- mlogit(
-#    lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ,
-#    data = Mroz87, reflevel = "no", shape = "wide" )
+# library( "mlogit" )
+# estMLogitInt <- mlogit(
+#   lfp3 ~ 0 | kids + age30.37 + age38.44 + age53.60 + educ,
+#   data = Mroz87, reflevel = "no", shape = "wide" )
 

@@ -1,8 +1,15 @@
 THIS IS THE CHANGELOG OF THE "urbin" PACKAGE
 
 Please note that only the most significant changes are reported here.
-A full ChangeLog is available in the log messages of the SVN repository
-on R-Forge.
+A full ChangeLog is available in the log messages of the Git repository
+at GitHub.
+
+
+   CHANGES IN VERSION 0.1-16 (2025-07-06)
+
+* transferred to code of the package from R-Froge to GitHub
+
+* no user-visible changes (except for the URL to the package)
 
 
    CHANGES IN VERSION 0.1-14 (2024-10-01)

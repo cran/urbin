@@ -1,6 +1,6 @@
 
-R version 4.4.1 (2024-06-14) -- "Race for Your Life"
-Copyright (C) 2024 The R Foundation for Statistical Computing
+R version 4.5.0 (2025-04-11) -- "How About a Twenty-Six"
+Copyright (C) 2025 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -25,18 +25,9 @@ Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihoo
 
 If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
 https://r-forge.r-project.org/projects/maxlik/
-> if( !require( "mlogit" ) ) {
+> if( suppressMessages( !require( "mlogit" ) ) ) {
 +   q( save = "no" )
 + }
-Loading required package: mlogit
-Loading required package: dfidx
-
-Attaching package: 'dfidx'
-
-The following object is masked from 'package:stats':
-
-    filter
-
 > if( !require( "sampleSelection" ) ) {
 +   q( save = "no" )
 + }
@@ -1928,4 +1919,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  3.641   0.160   3.792 
+  2.060   0.112   2.166 
