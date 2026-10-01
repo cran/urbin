@@ -1,6 +1,6 @@
 
-R version 4.4.1 (2024-06-14) -- "Race for Your Life"
-Copyright (C) 2024 The R Foundation for Statistical Computing
+R version 4.6.1 (2026-06-24) -- "Happy Hop"
+Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -15,34 +15,12 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
-> library( "urbin" )
-> maxLikLoaded <- require( "maxLik" )
-Loading required package: maxLik
-Loading required package: miscTools
-
-Please cite the 'maxLik' package as:
-Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
-
-If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
-https://r-forge.r-project.org/projects/maxlik/
-> mfxLoaded <- require( "mfx" )
-Loading required package: mfx
-Loading required package: sandwich
-Loading required package: lmtest
-Loading required package: zoo
-
-Attaching package: 'zoo'
-
-The following objects are masked from 'package:base':
-
-    as.Date, as.Date.numeric
-
-Loading required package: MASS
-Loading required package: betareg
-> if( !require( "sampleSelection" ) ) {
+> suppressPackageStartupMessages( library( "urbin" ) )
+> maxLikLoaded <- suppressPackageStartupMessages( require( "maxLik" ) )
+> mfxLoaded <- suppressPackageStartupMessages( require( "mfx" ) )
+> if( ! suppressPackageStartupMessages( require( "sampleSelection" ) ) ) {
 +   q( save = "no" )
 + }
-Loading required package: sampleSelection
 > options( digits = 4 )
 > 
 > # load data set
@@ -691,4 +669,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  1.686   0.069   1.748 
+  1.912   0.435   1.811 

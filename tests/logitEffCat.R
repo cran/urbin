@@ -1,4 +1,4 @@
-library( "urbin" )
+suppressPackageStartupMessages( library( "urbin" ) )
 
 # Example
 eff10a <- urbinEffCat( allCoef = c( 0.28, 0.003, 0.175, -0.034, 

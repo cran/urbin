@@ -1,4 +1,4 @@
-library( "urbin" )
+suppressPackageStartupMessages( library( "urbin" ) )
 
 # Example
 ela8a <- urbinElaInt( allCoef = c( 0.33, 0.22, 0.05, 0.6 ), 

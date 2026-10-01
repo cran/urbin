@@ -1,4 +1,4 @@
-library( "urbin" )
+suppressPackageStartupMessages( library( "urbin" ) )
 
 ela6a <- urbinEla( allCoef = c( 0.445, 0.03, 0.00002, 0.067, 0.89, 0.124 ),
   allXVal = c( 1, 3.3, 4.5, 2.34, 0.1, 0.987 ), xPos = 2, model = "logit" )

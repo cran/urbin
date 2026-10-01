@@ -5,6 +5,13 @@ A full ChangeLog is available in the log messages of the Git repository
 at GitHub.
 
 
+   CHANGES IN VERSION 0.1-18 (2026-10-01)
+
+* made the test scripts more robust to changes in other packages
+
+* no user-visible changes
+
+
    CHANGES IN VERSION 0.1-16 (2025-07-06)
 
 * transferred to code of the package from R-Froge to GitHub

@@ -1,6 +1,6 @@
 
-R version 4.5.0 (2025-04-11) -- "How About a Twenty-Six"
-Copyright (C) 2025 The R Foundation for Statistical Computing
+R version 4.6.1 (2026-06-24) -- "Happy Hop"
+Copyright (C) 2026 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -15,23 +15,14 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
-> library( "urbin" )
-> maxLikLoaded <- require( "maxLik" )
-Loading required package: maxLik
-Loading required package: miscTools
-
-Please cite the 'maxLik' package as:
-Henningsen, Arne and Toomet, Ott (2011). maxLik: A package for maximum likelihood estimation in R. Computational Statistics 26(3), 443-458. DOI 10.1007/s00180-010-0217-1.
-
-If you have questions, suggestions, or comments regarding the 'maxLik' package, please use a forum or 'tracker' at maxLik's R-Forge site:
-https://r-forge.r-project.org/projects/maxlik/
-> if( suppressMessages( !require( "mlogit" ) ) ) {
+> suppressPackageStartupMessages( library( "urbin" ) )
+> maxLikLoaded <- suppressPackageStartupMessages( require( "maxLik" ) )
+> if( ! suppressPackageStartupMessages( require( "mlogit" ) ) ) {
 +   q( save = "no" )
 + }
-> if( !require( "sampleSelection" ) ) {
+> if( ! suppressPackageStartupMessages( require( "sampleSelection" ) ) ) {
 +   q( save = "no" )
 + }
-Loading required package: sampleSelection
 > options( digits = 4 )
 > 
 > # load data set
@@ -1919,4 +1910,4 @@ effect  stdEr
 > 
 > proc.time()
    user  system elapsed 
-  2.060   0.112   2.166 
+  2.970   0.453   2.917 

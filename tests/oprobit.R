@@ -1,9 +1,9 @@
-library( "urbin" )
-maxLikLoaded <- require( "maxLik" )
-if( !require( "MASS" ) ) {
+suppressPackageStartupMessages( library( "urbin" ) )
+maxLikLoaded <- suppressPackageStartupMessages( require( "maxLik" ) )
+if( ! suppressPackageStartupMessages( require( "MASS" ) ) ) {
   q( save = "no" )
 }
-if( !require( "sampleSelection" ) ) {
+if( ! suppressPackageStartupMessages( require( "sampleSelection" ) ) ) {
   q( save = "no" )
 }
 options( digits = 3 )

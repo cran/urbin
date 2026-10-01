@@ -37,14 +37,14 @@
 \author{
    {Geraldine Henningsen}%
 \footnote{corresponding author.
-    E-mail: \url{geraldine.henningsen@googlemail.com}.}
+    E-mail: \href{mailto:geraldine.henningsen@googlemail.com}{\nolinkurl{geraldine.henningsen@googlemail.com}}.}
 \and
    {Arne Henningsen}%
 \footnote{
     University of Copenhagen,
     Department of Food and Resource Economics,
     Rolighedsvej~23, 1958~Frederiksberg~C, Denmark.
-    Phone: +45-3533-2274, e-mail: \url{arne@ifro.ku.dk}.}
+    Phone: +45-3533-2274, e-mail: \href{mailto:arne@ifro.ku.dk}{\nolinkurl{arne@ifro.ku.dk}}.}
 \thanks{Geraldine Henningsen was supported by the `SAVE-E' project funded by the
         `Innovation Fund Denmark' (grant number:~4106-00009B).
         The authors declare no conflicts of interest.

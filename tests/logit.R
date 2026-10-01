@@ -1,7 +1,7 @@
-library( "urbin" )
-maxLikLoaded <- require( "maxLik" )
-mfxLoaded <- require( "mfx" )
-if( !require( "sampleSelection" ) ) {
+suppressPackageStartupMessages( library( "urbin" ) )
+maxLikLoaded <- suppressPackageStartupMessages( require( "maxLik" ) )
+mfxLoaded <- suppressPackageStartupMessages( require( "mfx" ) )
+if( ! suppressPackageStartupMessages( require( "sampleSelection" ) ) ) {
   q( save = "no" )
 }
 options( digits = 4 )
